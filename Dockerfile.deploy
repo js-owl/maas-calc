@@ -1,0 +1,42 @@
+# Custom Deploy Image for GitLab CI/CD
+# Pre-installs tools to speed up deployment stage
+
+ARG UBUNTU_IMAGE="ubuntu:22.04"
+ARG APT_PROXY=""
+
+FROM ${UBUNTU_IMAGE}
+
+ARG APT_PROXY
+
+# Configure apt proxy for private registry (if provided)
+RUN if [ -n "${APT_PROXY}" ]; then \
+        echo "Acquire::http::Proxy \"${APT_PROXY}\";" > /etc/apt/apt.conf.d/99proxy && \
+        echo "Acquire::https::Proxy \"${APT_PROXY}\";" >> /etc/apt/apt.conf.d/99proxy; \
+    fi
+
+# Install SSH client, Docker Compose, and common deployment tools
+RUN apt-get update && \
+    apt-get install -y \
+        openssh-client \
+        curl \
+        jq \
+        ca-certificates \
+        gnupg \
+        lsb-release \
+        && rm -rf /var/lib/apt/lists/*
+
+# Install Docker CLI and Docker Compose plugin
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y docker-ce-cli docker-compose-plugin && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /deploy
+
+# This image is optimized for deployment tasks
+# Tools pre-installed: openssh-client, curl, jq, docker, docker-compose
+

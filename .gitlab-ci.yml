@@ -1,0 +1,407 @@
+# GitLab CI/CD Pipeline for Manufacturing Calculation API
+# Dual pipeline: production (v* tags) and development (dev-v* tags) deployments
+# Production: triggered by v* tags (e.g., v1.0.0, v1.2.3)
+# Development: triggered by dev-v* tags (e.g., dev-v1.0.0, dev-v1.2.3)
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  # Enable BuildKit for faster builds and caching
+  DOCKER_BUILDKIT: 1
+  BUILDKIT_PROGRESS: plain
+  # Image registry - separate repos for pulling base images vs pushing built images
+  IMAGE_NAME: maas-prod-stl
+  IMAGE_TAG: ${CI_COMMIT_TAG}
+  # NEXUS_BUILD_REGISTRY - for pulling base images during build (e.g., vortex.kronshtadt.ru:8443)
+  # NEXUS_PUSH_REGISTRY - for pushing final built images (e.g., nexus.maas.int.kronshtadt.ru:8443)
+  NEXUS_PUSH_IMAGE: ${NEXUS_PUSH_REGISTRY}/maas-hosted/${IMAGE_NAME}
+  # Computed image refs for caching and deployment
+  PROD_PUSH_IMAGE: ${NEXUS_PUSH_REGISTRY}/maas-hosted/${IMAGE_NAME}
+  PROD_BUILD_IMAGE: ${NEXUS_BUILD_REGISTRY}/maas-hosted/${IMAGE_NAME}
+  DEV_BUILD_IMAGE: ${NEXUS_BUILD_REGISTRY}/maas-hosted/${IMAGE_NAME}
+
+stages:
+  - build
+  - deploy
+
+# Build Docker image for production and push to Nexus registry
+build:production:
+  stage: build
+  image: ${NEXUS_BUILD_REGISTRY}/maas-proxy/${DOCKER_IMAGE}
+  services:
+    - name: ${NEXUS_BUILD_REGISTRY}/maas-proxy/docker:28.4.0-dind # Enable Docker-in-Docker
+      command: ["--insecure-registry=$NEXUS_BUILD_REGISTRY"]
+  cache:
+    key: 
+      files:
+        - requirements.txt
+    paths:
+      - .cache/pip/
+    policy: pull-push
+  before_script:
+    # Login to Nexus build registry (for pulling base images)
+    - echo $NEXUS_BUILD_PASSWORD | docker login -u $NEXUS_BUILD_USER --password-stdin $NEXUS_BUILD_REGISTRY
+    # Login to Nexus push registry (for pushing built images)
+    - echo $NEXUS_PUSH_PASSWORD | docker login -u $NEXUS_PUSH_USER --password-stdin $NEXUS_PUSH_REGISTRY
+    # Pull previous images for cache (ignore if not found)
+    - docker pull $PROD_BUILD_IMAGE:builder-latest || true
+    - docker pull $PROD_BUILD_IMAGE:latest || true
+  script:
+    # Build and push builder stage first for caching
+    - |
+      docker build -f Dockerfile.prod \
+        --target builder \
+        --build-arg PYTHON_IMAGE=${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim \
+        --build-arg APT_PROXY=${APT_PROXY} \
+        --build-arg PIP_INDEX_URL="${PIP_INDEX_URL}" \
+        --build-arg PIP_TRUSTED_HOST="${PIP_TRUSTED_HOST}" \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        --cache-from $PROD_BUILD_IMAGE:builder-latest \
+        -t $PROD_BUILD_IMAGE:builder-latest .
+    - docker push $PROD_BUILD_IMAGE:builder-latest
+    
+    # Build final image using cached builder stage
+    - |
+      docker build -f Dockerfile.prod \
+        --build-arg PYTHON_IMAGE=${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim \
+        --build-arg APT_PROXY=${APT_PROXY} \
+        --build-arg PIP_INDEX_URL="${PIP_INDEX_URL}" \
+        --build-arg PIP_TRUSTED_HOST="${PIP_TRUSTED_HOST}" \
+        --build-arg GIT_TAG=${CI_COMMIT_TAG} \
+        --build-arg GIT_HASH=${CI_COMMIT_SHA} \
+        --build-arg GIT_BRANCH=${CI_COMMIT_REF_NAME} \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        --cache-from $PROD_BUILD_IMAGE:builder-latest \
+        --cache-from $PROD_BUILD_IMAGE:latest \
+        -t $PROD_PUSH_IMAGE:$IMAGE_TAG \
+        -t $PROD_PUSH_IMAGE:latest .
+    
+    # Push final image tags to PUSH and BUILD registries
+    - docker push $PROD_PUSH_IMAGE:$IMAGE_TAG
+    - docker push $PROD_PUSH_IMAGE:latest
+    # Tag and push BUILD latest for caching pulls
+    - docker tag $PROD_PUSH_IMAGE:$IMAGE_TAG $PROD_BUILD_IMAGE:latest
+    - docker push $PROD_BUILD_IMAGE:latest
+    # Log deployment info
+    - |
+      echo "=================================================="
+      echo "Production Build Summary:"
+      echo "  Image Tag:       $IMAGE_TAG"
+      echo "  Push Registry:   $PROD_PUSH_IMAGE:$IMAGE_TAG"
+      echo "  Latest Tag:      $PROD_PUSH_IMAGE:latest"
+      echo "  Builder Cache:   $PROD_BUILD_IMAGE:builder-latest"
+      echo "  Build Cache:     $PROD_BUILD_IMAGE:latest"
+      echo "=================================================="
+    # Clean up local images
+    - docker rmi $PROD_PUSH_IMAGE:$IMAGE_TAG $PROD_PUSH_IMAGE:latest $PROD_BUILD_IMAGE:builder-latest $PROD_BUILD_IMAGE:latest || true
+  only:
+    - /^v[0-9]+\.[0-9]+\.[0-9]+$/
+  tags:
+    - maas
+
+# Build Docker image for development and push to Nexus registry
+build:development:
+  stage: build
+  image: ${NEXUS_BUILD_REGISTRY}/maas-proxy/${DOCKER_IMAGE}
+  services:
+    - name: ${NEXUS_BUILD_REGISTRY}/maas-proxy/docker:28.4.0-dind # Enable Docker-in-Docker
+      command: ["--insecure-registry=$NEXUS_BUILD_REGISTRY"]
+  cache:
+    key: 
+      files:
+        - requirements.txt
+    paths:
+      - .cache/pip/
+    policy: pull-push
+  before_script:
+    # Login to Nexus build registry (for pulling base images)
+    - echo $NEXUS_BUILD_PASSWORD | docker login -u $NEXUS_BUILD_USER --password-stdin $NEXUS_BUILD_REGISTRY
+    # Login to Nexus push registry (for pushing built images)
+    - echo $NEXUS_PUSH_PASSWORD | docker login -u $NEXUS_PUSH_USER --password-stdin $NEXUS_PUSH_REGISTRY
+    # Extract development image tag
+    - DEV_IMAGE_TAG=$CI_COMMIT_TAG
+    - echo "Development image tag:" $DEV_IMAGE_TAG
+    # Pull previous images for cache (ignore if not found)
+    - docker pull $DEV_BUILD_IMAGE:dev-builder-latest || true
+    - docker pull $DEV_BUILD_IMAGE:dev-latest || true
+  script:
+    # Build and push builder stage first for caching
+    - |
+      docker build -f Dockerfile.prod \
+        --target builder \
+        --build-arg PYTHON_IMAGE=${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim \
+        --build-arg APT_PROXY=${APT_PROXY} \
+        --build-arg PIP_INDEX_URL="${PIP_INDEX_URL}" \
+        --build-arg PIP_TRUSTED_HOST="${PIP_TRUSTED_HOST}" \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        --cache-from $DEV_BUILD_IMAGE:dev-builder-latest \
+        -t $DEV_BUILD_IMAGE:dev-builder-latest .
+    - docker push $DEV_BUILD_IMAGE:dev-builder-latest
+    
+    # Build final image using cached builder stage
+    - |
+      docker build -f Dockerfile.prod \
+        --build-arg PYTHON_IMAGE=${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim \
+        --build-arg APT_PROXY=${APT_PROXY} \
+        --build-arg PIP_INDEX_URL="${PIP_INDEX_URL}" \
+        --build-arg PIP_TRUSTED_HOST="${PIP_TRUSTED_HOST}" \
+        --build-arg GIT_TAG=${CI_COMMIT_TAG} \
+        --build-arg GIT_HASH=${CI_COMMIT_SHA} \
+        --build-arg GIT_BRANCH=${CI_COMMIT_REF_NAME} \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        --cache-from $DEV_BUILD_IMAGE:dev-builder-latest \
+        --cache-from $DEV_BUILD_IMAGE:dev-latest \
+        -t $DEV_BUILD_IMAGE:$DEV_IMAGE_TAG \
+        -t $DEV_BUILD_IMAGE:dev-latest .
+    
+    # Push final image tags to BUILD registry
+    - docker push $DEV_BUILD_IMAGE:$DEV_IMAGE_TAG
+    - docker push $DEV_BUILD_IMAGE:dev-latest
+    # Log deployment info
+    - |
+      echo "=================================================="
+      echo "Development Build Summary:"
+      echo "  Image Tag:       $DEV_IMAGE_TAG"
+      echo "  Build Registry:  $DEV_BUILD_IMAGE:$DEV_IMAGE_TAG"
+      echo "  Latest Tag:      $DEV_BUILD_IMAGE:dev-latest"
+      echo "  Builder Cache:   $DEV_BUILD_IMAGE:dev-builder-latest"
+      echo "=================================================="
+    # Clean up local images
+    - docker rmi $DEV_BUILD_IMAGE:$DEV_IMAGE_TAG $DEV_BUILD_IMAGE:dev-latest $DEV_BUILD_IMAGE:dev-builder-latest || true
+  only:
+    - /^dev-v[0-9]+\.[0-9]+\.[0-9]+$/
+  tags:
+    - maas
+
+# Deploy to remote production server
+deploy:production:
+  stage: deploy
+  image: ${NEXUS_PUSH_REGISTRY}/maas-hosted/${DOCKER_BUILD_TOOLS_IMAGE}
+  before_script:
+    # Setup SSH key (tools already pre-installed in custom image)
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -p $SSH_PORT $SSH_HOST >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  script:
+    - scp -P $SSH_PORT docker-compose.prod.yml $SSH_USER@$SSH_HOST:$REMOTE_PROJECT_PATH/
+    # Deploy to remote server
+    - |
+      ssh -p $SSH_PORT $SSH_USER@$SSH_HOST << EOF
+        set -e
+        
+        echo "Starting production deployment process..."
+        echo "Current directory: \$(pwd)"
+        echo "Target directory: ${REMOTE_PROJECT_PATH}"
+        
+        # Check if project directory exists, create if not
+        if [ ! -d "${REMOTE_PROJECT_PATH}" ]; then
+          echo "Project directory does not exist, creating it..."
+          sudo mkdir -p ${REMOTE_PROJECT_PATH}
+          sudo chown ${SSH_USER}:${SSH_USER} "${REMOTE_PROJECT_PATH}"
+          echo "Created project directory and chowned: ${REMOTE_PROJECT_PATH}"
+        else
+          echo "Project directory exists: ${REMOTE_PROJECT_PATH}"
+        fi
+        
+        # Navigate to project directory
+        cd ${REMOTE_PROJECT_PATH}
+        echo "Changed to project directory: ${REMOTE_PROJECT_PATH}"
+        
+        # Login to Nexus push registry
+        echo "Logging into Nexus registry..."
+        echo ${NEXUS_PUSH_PASSWORD} | docker login -u ${NEXUS_PUSH_USER} --password-stdin ${NEXUS_PUSH_REGISTRY}
+        echo "Successfully logged into Nexus registry"
+        
+        # Update docker-compose.prod.yml image tag
+        echo "Updating docker-compose.prod.yml with new image tag..."
+        sed -i "s|image:.*maas-prod-stl:.*|image: ${DEV_IMAGE_TAG}:${DEV_IMAGE_TAG}|g" docker-compose.prod.yml
+        echo "Updated docker-compose.prod.yml"
+        echo "New image: ${NEXUS_PUSH_IMAGE}:${DEV_IMAGE_TAG}"
+        
+        # Pull new image
+        echo "Pulling new Docker image..."
+        sudo docker compose -f docker-compose.prod.yml pull
+        echo "Image pulled successfully"
+        
+        # Stop and remove old container
+        echo "Stopping old container..."
+        sudo docker compose -f docker-compose.prod.yml down || true
+        echo "Old container stopped"
+        
+        # Start new container
+        echo "Starting new container..."
+        sudo docker compose -f docker-compose.prod.yml up -d
+        echo "New container started"
+        
+        # Verify deployment
+        sleep 10
+        
+        # Check container status
+        if docker compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+          echo "Container is running"
+        else
+          echo "Container is not running"
+          sudo docker compose -f docker-compose.prod.yml logs
+          exit 1
+        fi
+        
+        # Check if application is responding
+        CONTAINER_NAME=\$(sudo docker compose -f docker-compose.prod.yml ps -q)
+        if [ -n "\$CONTAINER_NAME" ]; then
+          # Wait for application to be ready
+          for i in {1..30}; do
+            if sudo docker exec \$CONTAINER_NAME curl -f http://localhost:7000/health 2>/dev/null; then
+              echo "Application health check passed"
+              break
+            elif [ \$i -eq 30 ]; then
+              echo "Application health check failed after 30 attempts"
+              sudo docker compose -f docker-compose.prod.yml logs
+              exit 1
+            else
+              echo "Waiting for application to be ready... (\$i/30)"
+              sleep 2
+            fi
+          done
+        fi
+        
+        # Log deployment info
+        echo "Production deployment successful"
+        echo "Image: ${NEXUS_PUSH_IMAGE}:${DEV_IMAGE_TAG}"
+        echo "Container status:"
+        sudo docker compose -f docker-compose.prod.yml ps
+        echo "Container logs (last 20 lines):"
+        sudo docker compose -f docker-compose.prod.yml logs --tail=20
+        
+        # Create deployment marker file
+        echo "Production deployment completed at \$(date)" > deployment.log
+        echo "Image: ${NEXUS_PUSH_IMAGE}:${DEV_IMAGE_TAG}" >> deployment.log
+        echo "Git tag: ${DEV_IMAGE_TAG}" >> deployment.log
+        echo "Git commit: ${CI_COMMIT_SHA}" >> deployment.log
+      EOF
+  only:
+    - /^v[0-9]+\.[0-9]+\.[0-9]+$/
+  dependencies:
+    - build:production
+  tags:
+    - maas
+
+# Deploy to remote development server
+deploy:development:
+  stage: deploy
+  image: ${NEXUS_BUILD_REGISTRY}/maas-hosted/${DOCKER_BUILD_TOOLS_IMAGE}
+  before_script:
+    # Setup SSH key (tools already pre-installed in custom image)
+    - eval $(ssh-agent -s)
+    - echo "$DEV_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -p $DEV_SSH_PORT $DEV_SSH_HOST >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    # Set development image tag
+    - DEV_IMAGE_TAG=$CI_COMMIT_TAG
+    - echo "Development image tag:" $DEV_IMAGE_TAG
+  script:
+    - scp -P $DEV_SSH_PORT docker-compose.prod.yml $DEV_SSH_USER@$DEV_SSH_HOST:$DEV_REMOTE_PROJECT_PATH/
+    # Deploy to remote development server
+    - |
+      ssh -p $DEV_SSH_PORT $DEV_SSH_USER@$DEV_SSH_HOST << EOF
+        set -e
+        
+        echo "Starting development deployment process..."
+        echo "Current directory: \$(pwd)"
+        echo "Target directory: ${DEV_REMOTE_PROJECT_PATH}"
+        
+        # Check if project directory exists, create if not
+        if [ ! -d "${DEV_REMOTE_PROJECT_PATH}" ]; then
+          echo "Project directory does not exist, creating it..."
+          sudo mkdir -p ${DEV_REMOTE_PROJECT_PATH}
+          sudo chown ${DEV_SSH_USER}:${DEV_SSH_USER} "${DEV_REMOTE_PROJECT_PATH}"
+          echo "Created project directory and chowned: ${DEV_REMOTE_PROJECT_PATH}"
+        else
+          echo "Project directory exists: ${DEV_REMOTE_PROJECT_PATH}"
+        fi
+        
+        # Navigate to project directory
+        cd ${DEV_REMOTE_PROJECT_PATH}
+        echo "Changed to project directory: ${DEV_REMOTE_PROJECT_PATH}"
+        
+        # Login to Nexus push registry
+        echo "Logging into Nexus registry..."
+        echo ${NEXUS_BUILD_PASSWORD} | docker login -u ${NEXUS_BUILD_USER} --password-stdin ${NEXUS_BUILD_REGISTRY}
+        echo "Successfully logged into Nexus registry"
+        
+        # Update docker-compose.prod.yml image tag
+        echo "Updating docker-compose.prod.yml with new image tag..."
+        sed -i "s|image:.*maas-prod-stl:.*|image: ${DEV_BUILD_IMAGE}:${DEV_IMAGE_TAG}|g" docker-compose.prod.yml
+        echo "Updated docker-compose.prod.yml"
+        echo "New image: ${NDEV_BUILD_IMAGE}:${DEV_IMAGE_TAG}"
+        
+        # Pull new image
+        echo "Pulling new Docker image..."
+        sudo docker compose -f docker-compose.prod.yml pull
+        echo "Image pulled successfully"
+        
+        # Stop and remove old container
+        echo "Stopping old container..."
+        sudo docker compose -f docker-compose.prod.yml down || true
+        echo "Old container stopped"
+        
+        # Start new container
+        echo "Starting new container..."
+        sudo docker compose -f docker-compose.prod.yml up -d
+        echo "New container started"
+        
+        # Verify deployment
+        sleep 10
+        
+        # Check container status
+        if docker compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+          echo "Container is running"
+        else
+          echo "Container is not running"
+          sudo docker compose -f docker-compose.prod.yml logs
+          exit 1
+        fi
+        
+        # Check if application is responding
+        CONTAINER_NAME=\$(sudo docker compose -f docker-compose.prod.yml ps -q)
+        if [ -n "\$CONTAINER_NAME" ]; then
+          # Wait for application to be ready
+          for i in {1..30}; do
+            if sudo docker exec \$CONTAINER_NAME curl -f http://localhost:7000/health 2>/dev/null; then
+              echo "Application health check passed"
+              break
+            elif [ \$i -eq 30 ]; then
+              echo "Application health check failed after 30 attempts"
+              sudo docker compose -f docker-compose.prod.yml logs
+              exit 1
+            else
+              echo "Waiting for application to be ready... (\$i/30)"
+              sleep 2
+            fi
+          done
+        fi
+        
+        # Log deployment info
+        echo "Development deployment successful"
+        echo "Image: ${NEXUS_PUSH_IMAGE}:${DEV_IMAGE_TAG}"
+        echo "Container status:"
+        sudo docker compose -f docker-compose.prod.yml ps
+        echo "Container logs (last 20 lines):"
+        sudo docker compose -f docker-compose.prod.yml logs --tail=20
+        
+        # Create deployment marker file
+        echo "Development deployment completed at \$(date)" > deployment.log
+        echo "Image: ${NEXUS_PUSH_IMAGE}:${DEV_IMAGE_TAG}" >> deployment.log
+        echo "Git tag: ${DEV_IMAGE_TAG}" >> deployment.log
+        echo "Git commit: ${CI_COMMIT_SHA}" >> deployment.log
+      EOF
+  only:
+    - /^dev-v[0-9]+\.[0-9]+\.[0-9]+$/
+  dependencies:
+    - build:development
+  tags:
+    - maas

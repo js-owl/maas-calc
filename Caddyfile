@@ -1,0 +1,89 @@
+# Caddyfile for STL & STP Manufacturing Calculations API
+
+# Global options
+{
+    # Enable automatic HTTPS
+    auto_https off
+    # Log level
+    log {
+        level INFO
+        format console
+    }
+}
+
+# Main API server
+:80 {
+    # Enable compression
+    encode gzip
+
+    # Security headers
+    header {
+        # Security headers
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        
+        # CORS headers (handled by FastAPI, but adding here as backup)
+        Access-Control-Allow-Origin "*"
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type, Authorization"
+    }
+
+    # Handle preflight requests
+    @options {
+        method OPTIONS
+    }
+    respond @options 200
+
+    # Proxy to FastAPI application
+    reverse_proxy stl-api:7000 {
+        # Health check
+        health_uri /calculate/health
+        health_interval 30s
+        health_timeout 5s
+        
+        # Load balancing (if multiple instances)
+        lb_policy round_robin
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+    }
+}
+
+# HTTPS redirect (if needed for production)
+# :443 {
+#     tls {
+#         # Caddy will automatically get certificates from Let's Encrypt
+#         # or use provided certificates
+#     }
+#     
+#     # Same configuration as HTTP but with TLS
+#     encode gzip
+#     
+#     rate_limit {
+#         zone static {
+#             key {remote_host}
+#             events 100
+#             window 1m
+#         }
+#     }
+#     
+#     header {
+#         X-Frame-Options "DENY"
+#         X-Content-Type-Options "nosniff"
+#         X-XSS-Protection "1; mode=block"
+#         Strict-Transport-Security "max-age=31536000; includeSubDomains"
+#     }
+#     
+#     reverse_proxy stl-api:7000 {
+#         health_uri /calculate/health
+#         health_interval 30s
+#         health_timeout 5s
+#         timeout 60s
+#         buffer_requests
+#         buffer_responses
+#     }
+# }

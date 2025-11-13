@@ -1,0 +1,62 @@
+# Use Python 3.11 slim image as base
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies including OpenGL libraries for STP file analysis
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    gettext-base \
+    libgl1-mesa-dev \
+    libglib2.0-0 \
+    libxrender1 \
+    libxext6 \
+    libx11-6 \
+    libglu1-mesa \
+    libglu1-mesa-dev \
+    libglib2.0-dev \
+    libxrender-dev \
+    libxext-dev \
+    libx11-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Configure pip for private PyPI registry (if provided)
+RUN if [ -n "${PIP_INDEX_URL}" ]; then \
+        pip config set global.index-url ${PIP_INDEX_URL}; \
+    fi
+RUN if [ -n "${PIP_TRUSTED_HOST}" ]; then \
+        pip config set global.trusted-host ${PIP_TRUSTED_HOST}; \
+    fi
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install development and testing dependencies
+COPY requirements-dev.txt .
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+# Create necessary directories
+RUN mkdir -p /app/uploads /app/logs
+
+# Create non-root user for security
+#RUN useradd --create-home --shell /bin/bash app && \
+#    chown -R app:app /app
+#USER app
+
+# Expose port
+EXPOSE 7000
+
+# Run the application with hot reload
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7000", "--reload"]

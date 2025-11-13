@@ -1,0 +1,82 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# CI/CD files
+.gitlab-ci.yml
+.gitlab-ci-config.md
+.gitlab-ci-future.yml
+
+# Documentation
+*.md
+docs/
+DOCKER.md
+FILE_DESCRIPTIONS.md
+FLOW_DIAGRAMS.md
+README.md
+test_results.md
+CI-CD-README.md
+GITLAB_VARIABLES.md
+TRAEFIK_DOCKER_PUSH_FIX.md
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+tests/
+test_files/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archives and examples
+_archive/
+examples/
+example/
+
+# Scripts (deployment scripts not needed in image)
+scripts/
+
+# Logs and uploads (will be mounted as volumes)
+logs/
+uploads/
+*.log
+
+# Docker files (don't need these inside the image)
+Dockerfile
+Dockerfile.*
+docker-compose*.yml
+Caddyfile
+
+# Project management
+howto.txt
+free_port.py
+recreate_venv.py
+
+# Kubernetes and monitoring configs
+k8s/
+monitoring/
+nginx/
+
+# Requirements files for dev (only prod requirements needed)
+requirements2.txt
+requirements-dev.txt

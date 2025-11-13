@@ -1,0 +1,64 @@
+# Docker Compose configuration for CI/CD testing
+# This file is used for local testing and can be referenced in GitLab CI
+
+version: '3.8'
+
+services:
+  # Main API service
+  maas-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7000:7000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - maas-network
+
+  # Test runner service
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "-m", "pytest", "tests/", "-v"]
+    volumes:
+      - .:/app
+      - ./test-results:/app/test-results
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_URL=http://maas-api:7000
+    depends_on:
+      - maas-api
+    networks:
+      - maas-network
+
+  # Security scanner service
+  security-scanner:
+    image: aquasec/trivy:latest
+    command: ["image", "--exit-code", "0", "--severity", "HIGH,CRITICAL", "--format", "table", "maas-api:latest"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - maas-api
+    networks:
+      - maas-network
+
+networks:
+  maas-network:
+    driver: bridge
+
+volumes:
+  logs:
+  uploads:
+  test-results:

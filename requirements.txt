@@ -1,0 +1,30 @@
+# Production dependencies only
+# For development/testing dependencies, see requirements-dev.txt
+
+# Web framework
+fastapi
+uvicorn[standard]
+python-multipart
+
+# 3D file processing and STP analysis
+numpy-stl
+stl
+trimesh
+cadquery==2.5.2
+#OCP>=0.1.9
+
+# Scientific computing
+numpy
+scipy
+shapely
+meshio
+
+# Machine learning
+joblib==1.5.2
+pandas==2.3.2
+xgboost==3.0.4
+scikit-learn>=1.3.0
+
+# Utilities
+requests
+openpyxl

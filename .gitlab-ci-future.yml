@@ -1,0 +1,201 @@
+# GitLab CI/CD Pipeline - Future Enhancements
+# This file contains examples of additional pipeline stages that can be added
+# when needed for comprehensive testing, security scanning, and code quality
+
+# To use these stages, copy the relevant jobs into the main .gitlab-ci.yml file
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_BUILDKIT: 1
+  BUILDKIT_PROGRESS: plain
+  IMAGE_NAME: maas-prod-stl
+  IMAGE_TAG: ${CI_COMMIT_TAG}
+  NEXUS_PUSH_IMAGE: ${NEXUS_PUSH_REGISTRY}/maas-hosted/${IMAGE_NAME}
+
+stages:
+  - test
+  - build
+  - security
+  - deploy
+
+# =============================================================================
+# TEST STAGES
+# =============================================================================
+
+# Unit Tests
+test:unit:
+  stage: test
+  image: ${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim
+  before_script:
+    - python -m venv .venv
+    - source .venv/bin/activate
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+  script:
+    - echo "Running unit tests..."
+    - source .venv/bin/activate
+    - python -m pytest tests/ -v --tb=short --junitxml=test-results.xml
+  artifacts:
+    reports:
+      junit: test-results.xml
+    paths:
+      - test-results.xml
+    expire_in: 1 week
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  only:
+    - merge_requests
+    - tags
+
+# Integration Tests
+test:integration:
+  stage: test
+  image: ${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim
+  services:
+    - name: ${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim
+      alias: api-server
+  before_script:
+    - python -m venv .venv
+    - source .venv/bin/activate
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+  script:
+    - echo "Starting API server for integration tests..."
+    - source .venv/bin/activate
+    - python main.py &
+    - sleep 10
+    - echo "Running integration tests..."
+    - python -m pytest tests/test_comprehensive_scenarios.py -v --tb=short
+  only:
+    - merge_requests
+    - tags
+
+# Code Quality Checks
+code_quality:
+  stage: test
+  image: ${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim
+  before_script:
+    - pip install flake8 black isort mypy
+  script:
+    - echo "Running code quality checks..."
+    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    - black --check .
+    - isort --check-only .
+    - mypy . --ignore-missing-imports || true
+  only:
+    - merge_requests
+    - tags
+
+# =============================================================================
+# SECURITY STAGES
+# =============================================================================
+
+# Docker Image Security Scan
+security:trivy:
+  stage: security
+  image: aquasec/trivy:latest
+  script:
+    - echo "Running Trivy security scan..."
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL --format table $NEXUS_PUSH_IMAGE:$IMAGE_TAG
+  allow_failure: true
+  only:
+    - tags
+  dependencies:
+    - build
+
+# Python Code Security Scan
+security:bandit:
+  stage: security
+  image: ${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim
+  before_script:
+    - pip install bandit
+  script:
+    - echo "Running Bandit security scan..."
+    - bandit -r . -f json -o bandit-report.json || true
+    - bandit -r . -f txt
+  artifacts:
+    reports:
+      codequality: bandit-report.json
+    paths:
+      - bandit-report.json
+    expire_in: 1 week
+  allow_failure: true
+  only:
+    - merge_requests
+    - tags
+
+# Dependency Security Scan
+security:dependency:
+  stage: security
+  image: ${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim
+  before_script:
+    - pip install safety
+  script:
+    - echo "Running dependency security scan..."
+    - safety check --json --output safety-report.json || true
+    - safety check
+  artifacts:
+    reports:
+      dependency_scanning: safety-report.json
+    paths:
+      - safety-report.json
+    expire_in: 1 week
+  allow_failure: true
+  only:
+    - merge_requests
+    - tags
+
+# =============================================================================
+# PERFORMANCE TESTING
+# =============================================================================
+
+# Load Testing
+test:performance:
+  stage: test
+  image: ${NEXUS_BUILD_REGISTRY}/maas-proxy/python:3.11-slim
+  before_script:
+    - pip install locust
+  script:
+    - echo "Running performance tests..."
+    - locust --headless --users 10 --spawn-rate 2 --run-time 60s --host http://localhost:7000
+  only:
+    - tags
+  allow_failure: true
+
+# =============================================================================
+# NOTIFICATION STAGES
+# =============================================================================
+
+# Notification on failure
+notify:on_failure:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "Pipeline failed! Notifying team..."
+    - echo "This would send notifications via Slack, email, etc."
+  when: on_failure
+  allow_failure: true
+
+# =============================================================================
+# USAGE INSTRUCTIONS
+# =============================================================================
+
+# To add these stages to your main pipeline:
+# 1. Copy the desired jobs from this file
+# 2. Paste them into .gitlab-ci.yml
+# 3. Update the stages list to include the new stage names
+# 4. Adjust the 'only' conditions as needed
+# 5. Test the pipeline with a merge request or tag
+
+# Example stages list with all features:
+# stages:
+#   - test
+#   - build
+#   - security
+#   - deploy
+
+# Example stages list with just testing:
+# stages:
+#   - test
+#   - build
+#   - deploy
