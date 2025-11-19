@@ -205,14 +205,14 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
             errors.append(e)
         
         # Validate material form if provided
-        if "material_form" in request_data:
-            try:
-                Validator.validate_material_form(
-                    request_data["material_id"],
-                    request_data["material_form"]
-                )
-            except ValidationError as e:
-                errors.append(e)
+        # if "material_form" in request_data:
+        #     try:
+        #         Validator.validate_material_form(
+        #             request_data["material_id"],
+        #             request_data["material_form"]
+        #         )
+        #     except ValidationError as e:
+        #         errors.append(e)
     
     # Validate dimensions if provided
     if "dimensions" in request_data:

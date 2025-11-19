@@ -201,6 +201,7 @@ class MLPredictor:
             features_df['material_bar'] = features_df['material_bar'].map(
                 {'sheet': 'Лист', 'rod': 'Пруток', 'hexagon': 'Шестигранник'}
             )
+
             # Update materials features in df
             features_df['density_approximately'] = features_df['density_approximately'] * 1e-9
             features_df['weight_approximately'] = features_df['density_approximately'] * features_df['volume']

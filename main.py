@@ -135,7 +135,7 @@ async def calculate_price(request: UnifiedCalculationRequest):
         # Add ML features to merged parameters
         if ml_features:
             merged_params['ml_features'] = ml_features
-        
+            
         # Step 3: Apply safeguards for missing parameters
         safeguarded_params = safeguard_manager.apply_safeguards(request.service_id, merged_params)
         
@@ -225,6 +225,8 @@ async def list_materials(process: Optional[str] = None):
             "forms": material_info.get("forms", {}),
             "applicable_processes": material_info.get("applicable_processes", [])
         })
+    
+    materials_list = sorted(materials_list, key=lambda x: x['label'])
     
     data = {"materials": materials_list}
     message = f"Materials retrieved successfully{f' for process: {process}' if process else ''}"

@@ -45,8 +45,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "material_coef": 1.0,
         "material_group": "Цветные",
         "material_name_group": "Алюминиевый деформируемый сплав",
-        "hardness": 120,
-        "strenghtness": 450,
+        "hardness": 42,
+        "strenghtness": 245,
         "thermal_conductivity": 160,
         "relative_coef": 1.0
     },
@@ -232,12 +232,16 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "label": "Сталь 14Х17Н2", 
         "family": "steel", 
         "density": 7850.0, 
-        "k_handle": 0.045,
+        "k_handle": 0.0,
         "applicable_processes": ["cnc_milling", "cnc_lathe", "painting"],
         "forms": {
             "sheet": {
                 "price": 2000,
                 "applicable_processes": ["cnc-milling", "painting"],
+            },
+            "rod": {
+                "price": 261.92,
+                "applicable_processes": ["cnc-milling", "cnc_lathe"],
             }
         },
         "material_name": "14Х17Н2",
@@ -345,6 +349,190 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "strenghtness": 150,
         "thermal_conductivity": 220,
         "relative_coef": 1.30
+    },
+    "alum_D16T": {
+        "label": "Алюминий Д16Т",
+        "family": "alum",
+        "density": 2800.0,
+        "k_handle": 0.0,
+        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "forms": {
+            "sheet": {
+                "price": 465.6,
+                "applicable_processes": ["cnc-milling"],
+            }, 
+            "rod": {
+                "price": 545.9,
+                "applicable_processes": ["cnc-milling", "cnc-lathe"],
+            }
+        },
+        "material_name": "Д16",
+        "material_name_main": "Алюминий",
+        "material_coef": 0.0,
+        "material_group": "Цветные",
+        "material_name_group": "Алюминиевый деформируемый сплав",
+        "hardness": 105,
+        "strenghtness": 450,
+        "thermal_conductivity": 160,
+        "relative_coef": 0.9
+    },
+    "steel_40Х13": {
+        "label": "Сталь 40Х13", 
+        "family": "steel", 
+        "density": 7770.0, 
+        "k_handle": 0.0,
+        "applicable_processes": ["cnc_milling", "cnc_lathe"],
+        "forms": {
+            "rod": {
+                "price": 196.89,
+                "applicable_processes": ["cnc-milling", "cnc-lathe"],
+            }
+        },
+        "material_name": "40Х13",
+        "material_name_main": "Сталь",
+        "material_coef": 0.0,
+        "material_group": "Труднообрабатываемые",
+        "material_name_group": "Коррозионно-стойкая жаропрочная",
+        "hardness": 230,
+        "strenghtness": 700,
+        "thermal_conductivity": 25,
+        "relative_coef": 0.6
+    },
+    "alum_АК4": {
+        "label": "Алюминий АК4", 
+        "family": "alum", 
+        "density": 2770.0, 
+        "k_handle": 0.0,
+        "applicable_processes": ["cnc-milling"],
+        "forms": {
+            "sheet": {
+                "price": 856.53,
+                "applicable_processes": ["cnc-milling"],
+            }, 
+        },
+        "material_name": "АК4",
+        "material_name_main": "Алюминий",
+        "material_coef": 0.8,
+        "material_group": "Цветные",
+        "material_name_group": "Алюминиевый деформируемый сплав",
+        "hardness": 100,
+        "strenghtness": 335,
+        "thermal_conductivity": 150,
+        "relative_coef": 0.85
+    },
+    "latun_Л63": {
+        "label": "Латунь Л63", 
+        "family": "latun", 
+        "density": 8440.0, 
+        "k_handle": 0.0,
+        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "forms": {
+            "rod": {
+                "price": 428.52,
+                "applicable_processes": ["cnc-milling", "cnc-lathe"],
+            }, 
+        },
+        "material_name": "Л63",
+        "material_name_main": "Латунь",
+        "material_coef": 0.0,
+        "material_group": "Цветные",
+        "material_name_group": "Латунь, обрабатываемая давлением",
+        "hardness": 70,
+        "strenghtness": 290,
+        "thermal_conductivity": 120,
+        "relative_coef": 0.9
+    },
+    "bronze_БрАЖМц10-3-1.5": {
+        "label": "Бронза БрАЖМц10-3-1.5", 
+        "family": "bronze", 
+        "density": 7500.0, 
+        "k_handle": 0.0,
+        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "forms": {
+            "rod": {
+                "price": 610.21,
+                "applicable_processes": ["cnc-milling", "cnc-lathe"],
+            }, 
+        },
+        "material_name": "БрАЖМц10-3-1.5",
+        "material_name_main": "Бронза",
+        "material_coef": 0.0,
+        "material_group": "Цветные",
+        "material_name_group": "Бронза безоловянная, обрабатываемая давлением",
+        "hardness": 130,
+        "strenghtness": 590,
+        "thermal_conductivity": 60,
+        "relative_coef": 0.7
+    },
+    "steel_45": {
+        "label": "Сталь 45", 
+        "family": "steel", 
+        "density": 7826.0, 
+        "k_handle": 0.0,
+        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "forms": {
+            "rod": {
+                "price": 63.03,
+                "applicable_processes": ["cnc-milling", "cnc-lathe"],
+            }, 
+        },
+        "material_name": "Ст45",
+        "material_name_main": "Сталь",
+        "material_coef": 0.0,
+        "material_group": "Конструкционная углеродистая качественная",
+        "material_name_group": "Углеродистые и легированные стали",
+        "hardness": 200,
+        "strenghtness": 750,
+        "thermal_conductivity": 45,
+        "relative_coef": 0.85
+    },
+    "steel_20": {
+        "label": "Сталь 20", 
+        "family": "steel", 
+        "density": 7859.0, 
+        "k_handle": 0.0,
+        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "forms": {
+            "sheet": {
+                "price": 68.565,
+                "applicable_processes": ["cnc-milling"],
+            }, 
+            "rod": {
+                "price": 55.23,
+                "applicable_processes": ["cnc-milling", "cnc-lathe"],
+            }, 
+        },
+        "material_name": "Ст20",
+        "material_name_main": "Сталь",
+        "material_coef": 0.0,
+        "material_group": "Конструкционная углеродистая качественная",
+        "material_name_group": "Углеродистые и легированные стали",
+        "hardness": 130,
+        "strenghtness": 450,
+        "thermal_conductivity": 48,
+        "relative_coef": 0.95
+    },
+    "steel_40Х": {
+        "label": "Сталь 40Х", 
+        "family": "steel", 
+        "density": 7820.0, 
+        "k_handle": 0.0,
+        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "forms": {
+            "hexagon": {
+                "price": 74.45,
+                "applicable_processes": ["cnc-milling", "cnc-lathe"],
+            }
+        },
+        "material_name": "40Х",
+        "material_name_main": "Сталь",
+        "material_coef": 0.0,
+        "material_group": "Углеродистые и легированные стали",
+        "material_name_group": "Конструкционная легированная",
+        "hardness": 200,
+        "strenghtness": 800,
+        "thermal_conductivity": 45,
+        "relative_coef": 1.25
     },
     # "alum_6061": {
     #     "label": "Алюминий 6061", "family": "alum", "density": 2700.0, "k_handle": 0.03,

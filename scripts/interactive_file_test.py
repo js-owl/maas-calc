@@ -119,6 +119,7 @@ class InteractiveFileTester:
         while True:
             try:
                 user_input = input(f"\n{prompt}: ").strip()
+                user_input = str(user_input)
                 if valid_options and user_input not in valid_options:
                     print(f"❌ Invalid option. Please choose from: {', '.join(valid_options)}")
                     continue
@@ -208,6 +209,7 @@ class InteractiveFileTester:
                     'label': material_info.get('label', ''),
                     'forms': list(material_info.get('forms', {}).keys())
                 })
+        materials = sorted(materials, key=lambda x: x['label'])
         return materials
     
     def configure_parameters_quick(self, service_id: str, file_type: str) -> Dict[str, Any]:
@@ -264,6 +266,12 @@ class InteractiveFileTester:
         # Material form selection
         material_info = MATERIALS[params['material_id']]
         forms = list(material_info.get('forms', {}).keys())
+        if "sheet" not in forms:
+            forms.append("sheet")
+        if "rod" not in forms:
+            forms.append("rod")
+        if "hexagon" not in forms:
+            forms.append("hexagon")
         
         if forms:
             print(f"\nAvailable Forms for {material_info['label']}:")
@@ -306,11 +314,14 @@ class InteractiveFileTester:
         
         # Location
         print(f"\nAvailable Locations:")
-        for key, location_info in LOCATIONS.items():
-            print(f"  [{key}] {location_info['name']}")
+        locations_id = []
+        for id, location_info in enumerate(LOCATIONS.items()):
+            locations_id.append(str(id+1))
+            print(f"  [{id+1}] {location_info[1]['name']}")
         
-        location_choice = self.get_user_input("Select location", list(LOCATIONS.keys()))
-        params['location'] = location_choice
+        available_locations = list(LOCATIONS.keys())
+        location_choice = self.get_user_input("Select location", locations_id)
+        params['location'] = available_locations[int(location_choice)]
         
         # Service-specific parameters
         if service_id == "printing":
@@ -401,22 +412,22 @@ class InteractiveFileTester:
         params['finish_id'] = finish_choice
         
         # CNC complexity
-        complexity_options = ["low", "medium", "high"]
-        print(f"\nCNC Complexity Options: {', '.join(complexity_options)}")
-        complexity_choice = self.get_user_input("Select CNC complexity", complexity_options)
-        params['cnc_complexity'] = complexity_choice
+        # complexity_options = ["low", "medium", "high"]
+        # print(f"\nCNC Complexity Options: {', '.join(complexity_options)}")
+        # complexity_choice = self.get_user_input("Select CNC complexity", complexity_options)
+        # params['cnc_complexity'] = complexity_choice
         
         # CNC setup time
-        while True:
-            try:
-                setup_time = float(self.get_user_input("Enter CNC setup time (0.5-10.0 hours)"))
-                if 0.5 <= setup_time <= 10.0:
-                    params['cnc_setup_time'] = setup_time
-                    break
-                else:
-                    print("❌ Setup time must be between 0.5 and 10.0 hours")
-            except ValueError:
-                print("❌ Please enter a valid number")
+        # while True:
+        #     try:
+        #         setup_time = float(self.get_user_input("Enter CNC setup time (0.5-10.0 hours)"))
+        #         if 0.5 <= setup_time <= 10.0:
+        #             params['cnc_setup_time'] = setup_time
+        #             break
+        #         else:
+        #             print("❌ Setup time must be between 0.5 and 10.0 hours")
+        #     except ValueError:
+        #         print("❌ Please enter a valid number")
         
         # k_otk
         while True:

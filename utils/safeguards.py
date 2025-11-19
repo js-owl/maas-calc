@@ -103,8 +103,11 @@ class SafeguardManager:
         
         # Special handling for material_form validation
         if "material_id" in safeguarded and "material_form" in safeguarded:
-            self._validate_material_form(safeguarded["material_id"], safeguarded["material_form"])
-        
+            safeguard_form = self._validate_material_form(safeguarded["material_id"], safeguarded["material_form"])
+            if safeguard_form:
+                safeguarded["material_form"] = safeguard_form
+        logger.info(f"Safeguarded material form: {safeguarded['material_form']}")
+
         return safeguarded
     
     def _validate_material_form(self, material_id: str, material_form: MaterialForm) -> None:
@@ -112,12 +115,13 @@ class SafeguardManager:
         try:
             from constants import MATERIALS
             if material_id in MATERIALS:
-                allowed_forms = MATERIALS[material_id].get("forms", [])
+                allowed_forms = list(MATERIALS[material_id].get("forms", []).keys())
                 if material_form not in allowed_forms:
                     logger.warning(f"Form '{material_form}' not allowed for {material_id}. Using first allowed form.")
                     # Use first allowed form as fallback
                     if allowed_forms:
-                        material_form = allowed_forms[0]
+                        safeguard_form = allowed_forms[0]
+                        return safeguard_form
         except Exception as e:
             logger.warning(f"Error validating material form: {e}")
     
