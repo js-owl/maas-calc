@@ -104,8 +104,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy application code
-COPY . .
+# Copy application code in layers for better cache efficiency
+# Order: least to most frequently changing files
+# 1. ML models (large files, rarely change)
+COPY ml_models/ ml_models/
+
+# 2. Configuration files (change infrequently)
+COPY constants.py pip.conf ./
+
+# 3. Data models (change less frequently than business logic)
+COPY models/ models/
+
+# 4. Extractors (change less frequently)
+COPY extractors/ extractors/
+
+# 5. Calculation logic (business logic)
+COPY calculations/ calculations/
+
+# 6. Calculator implementations (business logic)
+COPY calculators/ calculators/
+
+# 7. Utility modules (supporting code)
+COPY utils/ utils/
+
+# 8. Main application entry point (changes most frequently)
+COPY main.py ./
 
 # Create necessary directories
 RUN mkdir -p /app/uploads /app/logs

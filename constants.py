@@ -233,7 +233,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "family": "steel", 
         "density": 7850.0, 
         "k_handle": 0.0,
-        "applicable_processes": ["cnc_milling", "cnc_lathe", "painting"],
+        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
         "forms": {
             "sheet": {
                 "price": 2000,
@@ -381,7 +381,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "family": "steel", 
         "density": 7770.0, 
         "k_handle": 0.0,
-        "applicable_processes": ["cnc_milling", "cnc_lathe"],
+        "applicable_processes": ["cnc-milling", "cnc-lathe"],
         "forms": {
             "rod": {
                 "price": 196.89,
@@ -607,7 +607,6 @@ FINISH = {
 }
 
 COVER = {
-    # "0": {"label": "Без покрытия", "value": 1.0, "cycle_time": 1.0},
     "1": {"label": "Покраска", "value": 1.05, "cycle_time": 1.0},
     "2": {"label": "Гальваника", "value": 1.15, "cycle_time": 2.0},
 }
@@ -621,7 +620,36 @@ TOLERANCE = {
     "6": {"label": "IT12", "value": 0.9},
 }
 
-CERT_COSTS = {"a": 0.0, "b": 0.0, "c": 0.0, "d": 0.0, "e": 0.0, "f": 0.0, "g": 0.0}
+CONTROL_TYPES = {
+    "1": {"label": "Изготовителя", "value": 1.0}, 
+    "2": {"label": "Заказчика на площадке изготовителя", "value": 1.2}, 
+    "3": {"label": "Независимой приёмкой", "value": 1.15}, 
+}
+
+CERT_COSTS = {
+    "1": {"label": "a", "value": 0.0}, 
+    "2": {"label": "b", "value": 0.0}, 
+    "3": {"label": "c", "value": 0.0}, 
+    "4": {"label": "d", "value": 0.0}, 
+    "5": {"label": "d", "value": 0.0}, 
+    "6": {"label": "e", "value": 0.0}, 
+    "7": {"label": "f", "value": 0.0}, 
+}
+
+AUTO_SERVICES = {
+    "1": {"label": "3D-печать", "service": "printing"},
+    "2": {"label": "Механическая обработка", "service": "cnc-milling"},
+}
+
+OTHER_SERVICES = {
+    "1": {"label": "Листогибочные работы", "service": "bending"},
+    "2": {"label": "Слесарные работы", "service": "handing"},
+    "3": {"label": "Термическая обработка", "service": "heating"},
+    "4": {"label": "Лазерная резка", "service": "laser-cutting"},
+    "5": {"label": "Шлифование", "service": "grinding"},
+    "6": {"label": "Сварочные работы", "service": "welding"},
+    "7": {"label": "Покрасочные работы", "service": "painting"},
+}
 
 # Default values for calculations
 DEFAULTS = {
@@ -707,13 +735,16 @@ HTTP_STATUS_CODES = {
 
 LOCATIONS = {
     "location_1": {
-        "name": "rudnevo"
+        "name": "rudnevo",
+        "russian_name": "ЦКП"
     },
     "location_2": {
-        "name": "dubna"
+        "name": "dubna",
+        "russian_name": "АО_ДМЗ"
     },
     "location_3": {
-        "name": "saransk"
+        "name": "saransk",
+        "russian_name": "КТ-Спектр"
     },
 }
 

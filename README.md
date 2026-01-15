@@ -127,6 +127,9 @@ graph TD
    source venv/bin/activate  # Linux/Mac
    # or
    venv\Scripts\activate     # Windows
+   # or
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   .\venv\Scripts\Activate.ps1
    ```
 
 2. **Install dependencies**

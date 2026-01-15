@@ -36,6 +36,7 @@ ENV/
 # Testing
 tests/
 test_files/
+test_results/
 .pytest_cache/
 .coverage
 htmlcov/
@@ -47,6 +48,8 @@ htmlcov/
 *.swp
 *.swo
 *~
+free_port.py
+recreate_venv.py
 
 # Archives and examples
 _archive/
@@ -69,8 +72,6 @@ Caddyfile
 
 # Project management
 howto.txt
-free_port.py
-recreate_venv.py
 
 # Kubernetes and monitoring configs
 k8s/
@@ -79,4 +80,4 @@ nginx/
 
 # Requirements files for dev (only prod requirements needed)
 requirements2.txt
-requirements-dev.txt
+# requirements-dev.txt - needed for Dockerfile.dev

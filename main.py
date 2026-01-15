@@ -17,7 +17,11 @@ from utils.logging_utils import get_logger, set_request_id
 from utils.middleware import RequestTrackingMiddleware
 from utils.versioning import VersioningMiddleware, get_version_info
 from utils.validation_utils import validate_calculation_request, create_validation_error_response
-from constants import MATERIALS, LOCATIONS, COVER, TOLERANCE, FINISH, APP_VERSION
+from constants import (
+    MATERIALS, LOCATIONS, COVER, TOLERANCE, 
+    FINISH, CONTROL_TYPES, CERT_COSTS, AUTO_SERVICES,
+    OTHER_SERVICES, APP_VERSION
+)
 
 # Configure logging
 logger = get_logger(__name__)
@@ -111,6 +115,9 @@ async def calculate_price(request: UnifiedCalculationRequest):
         file_id=request.file_id or "unknown",
         request_id=getattr(request, 'request_id', None)
     )
+    # logging request to dev
+    filtered_request = {k: v for k, v in request_data.items() if k != "file_data"}
+    logger.info(f"============================= Request: поля: {list(request_data.keys())}, Request data without file_data {filtered_request}")
     
     try:
         # Step 1: Extract parameters from file if provided
@@ -151,6 +158,7 @@ async def calculate_price(request: UnifiedCalculationRequest):
             safeguarded_params, 
             use_ml=use_ml
         )
+        print('======================================= main.py calculate_price() result:', result.model_dump())
         
         # Step 5: Add file information and calculation engine info
         if request.file_name:
@@ -237,7 +245,16 @@ async def list_materials(process: Optional[str] = None):
 async def list_services():
     """List available manufacturing services"""
     data = {
-        "services": ["printing", "cnc-milling", "cnc-lathe", "painting"]
+        "services": [v['service'] for k, v in AUTO_SERVICES.items()] + [v['service'] for k, v in OTHER_SERVICES.items()]
+    }
+    return ResponseWrapper.success_response(data, "Services retrieved successfully")
+
+
+@app.get("/auto_services", tags=["Configuration"])
+async def list_services():
+    """List available manufacturing services"""
+    data = {
+        "services": [{"id": k, **v} for k, v in AUTO_SERVICES.items()],
     }
     return ResponseWrapper.success_response(data, "Services retrieved successfully")
 
@@ -248,7 +265,9 @@ async def list_coefficients():
     data = {
         "tolerance": [{"id": k, **v} for k, v in TOLERANCE.items()],
         "finish": [{"id": k, **v} for k, v in FINISH.items()],
-        "cover": [{"id": k, **v} for k, v in COVER.items()]
+        "cover": [{"id": k, **v} for k, v in COVER.items()],
+        "control_types": [{"id": k, **v} for k, v in CONTROL_TYPES.items()],
+        "cert_costs": [{"id": k, **v} for k, v in CERT_COSTS.items()]
     }
     return ResponseWrapper.success_response(data, "Coefficients retrieved successfully")
 
@@ -260,6 +279,18 @@ async def list_locations():
         "locations": [{"id": k, **v} for k, v in LOCATIONS.items()]
     }
     return ResponseWrapper.success_response(data, "Locations retrieved successfully")
+
+
+@app.get("/other_services", tags=["Configuration"])
+async def list_locations():
+    """
+    List available other manufacturing services 
+    without auto price calculations.
+    """
+    data = {
+        "other_services": [{"id": k, **v} for k, v in OTHER_SERVICES.items()]
+    }
+    return ResponseWrapper.success_response(data, "Other services retrieved successfully")
 
 
 if __name__ == "__main__":

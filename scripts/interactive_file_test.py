@@ -321,7 +321,7 @@ class InteractiveFileTester:
         
         available_locations = list(LOCATIONS.keys())
         location_choice = self.get_user_input("Select location", locations_id)
-        params['location'] = available_locations[int(location_choice)]
+        params['location'] = available_locations[int(location_choice)-1]
         
         # Service-specific parameters
         if service_id == "printing":
@@ -496,7 +496,7 @@ class InteractiveFileTester:
             print(f"❌ Error reading file: {e}")
             return None
     
-    def upload_file(self, file_info: Dict[str, Any], service_id: str, parameters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def upload_file(self, file_info: Dict[str, Any], service_id: str, parameters: Dict[str, Any], show_request=False) -> Optional[Dict[str, Any]]:
         """Upload file and parameters to API"""
         print(f"\n📤 Uploading file to API...")
         
@@ -540,7 +540,8 @@ class InteractiveFileTester:
             
             if response.status_code == 200:
                 print("✅ Upload successful!")
-                return response.json()
+                if show_request==True:
+                    return response.json(), request_data
             else:
                 print(f"❌ Upload failed with status {response.status_code}")
                 print(f"Error: {response.text}")
@@ -613,7 +614,7 @@ class InteractiveFileTester:
             if value is not None:
                 print(f"  {key}: {value:.3f}")
     
-    def save_results(self, results: Dict[str, Any], file_info: Dict[str, Any], service_id: str):
+    def save_results(self, results: Dict[str, Any], file_info: Dict[str, Any], service_id: str, request: Dict):
         """Save results to JSON file"""
         save_choice = self.get_user_input("\nSave results to file? (y/n)", ["y", "n", "yes", "no"])
         if save_choice.lower() not in ["y", "yes"]:
@@ -625,11 +626,14 @@ class InteractiveFileTester:
         
         # Generate filename
         timestamp = __import__('datetime').datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"result_{file_info['name']}_{service_id}_{timestamp}.json"
+        filename = f"result_{file_info['name']}_{service_id}_{timestamp}.txt"
         filepath = results_dir / filename
         
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
+                f.write('Request:\n')
+                json.dump(request, f, indent=2)
+                f.write('\nResponse:\n')
                 json.dump(results, f, indent=2, ensure_ascii=False)
             print(f"✅ Results saved to: {filepath}")
         except Exception as e:
@@ -673,11 +677,11 @@ class InteractiveFileTester:
                 continue
             
             # Upload and get results
-            results = self.upload_file(file_info, service_id, parameters)
+            results, request_data = self.upload_file(file_info, service_id, parameters, show_request=True)
             
             if results:
                 self.display_results(results)
-                self.save_results(results, file_info, service_id)
+                self.save_results(results, file_info, service_id, request_data)
             
             # Continue or exit
             continue_choice = self.get_user_input("\nTest another file? (y/n)", ["y", "n", "yes", "no"])
