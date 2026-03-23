@@ -76,13 +76,13 @@ class FileParameterExtractor:
             
             length = max_coords[0] - min_coords[0]
             width = max_coords[1] - min_coords[1] 
-            thickness = max_coords[2] - min_coords[2]
+            height = max_coords[2] - min_coords[2]
             
-            if length > 0 and width > 0 and thickness > 0:
+            if length > 0 and width > 0 and height > 0:
                 return Dimensions(
                     length=length,
                     width=width,
-                    thickness=thickness
+                    height=height
                 )
         except Exception as e:
             logger.warning(f"Error extracting dimensions from bounds: {e}")

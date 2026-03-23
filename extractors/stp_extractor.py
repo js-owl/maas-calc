@@ -190,7 +190,7 @@ class STPExtractor(FileParameterExtractor):
                 analysis_result['dimensions'] = {
                     'length': dimensions[2],
                     'width': dimensions[1],
-                    'thickness': dimensions[0]
+                    'height': dimensions[0]
                 }
                 # Lathe suitability
                 analysis_result['check_sizes_for_lathe'] = 1 if any(
@@ -255,6 +255,7 @@ class STPExtractor(FileParameterExtractor):
                 analysis_result['other_area'] = surface_area - \
                     analysis_result['planar_area'] + analysis_result['cylindrical_area'] + analysis_result['conical_area'] + \
                     analysis_result['toroidal_area'] + analysis_result['spherical_area'] + analysis_result['bspline_area']
+                analysis_result['curved_area'] = surface_area - analysis_result['planar_area']
 
                 # Ratios for areas of faces
                 analysis_result['ratio_planar_area'] = analysis_result['planar_area'] / surface_area
@@ -315,6 +316,7 @@ class STPExtractor(FileParameterExtractor):
                 
                 analysis_result['removable_score_better'] = analysis_result['volume'] / analysis_result['volume_bar'] if analysis_result['volume_bar'] > 0 else 0
                 analysis_result['surface_area_detail_obb_ratio'] = analysis_result['surface_area'] / analysis_result['surface_area_obb'] if analysis_result['surface_area_obb'] > 0 else 0
+                analysis_result['diff_obb_detail_area'] = surface_area - analysis_result['surface_area_obb']
                 analysis_result['removable_volume'] = analysis_result['volume_bar'] - analysis_result['volume']
 
             except Exception as e:

@@ -41,10 +41,10 @@ class PaintingCalculator(BaseCalculator):
             # For painting, we calculate the surface area of the part
             length = request.dimensions.length
             width = request.dimensions.width
-            thickness = request.dimensions.thickness
+            height = request.dimensions.height
             
             # Calculate surface area (simplified as 6 faces of a box)
-            paint_area = 2 * (length * width + length * thickness + width * thickness)
+            paint_area = 2 * (length * width + length * height + width * height)
             
             # Prepare calculation parameters in the format expected by legacy functions
             calc_params = {

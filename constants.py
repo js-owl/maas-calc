@@ -3,12 +3,14 @@ from typing import Dict, Any
 APP_VERSION = "3.3.0"
 
 # ML Model Configuration
-ML_REGRESSOR_PATH = "ml_models/base_model_xgb_v0.04log.json"
+ML_REGRESSOR_PATH = "ml_models/cbm_v0.0.cbm" 
 ML_CLASSIFIER_PATH = "ml_models/base_model_xgb_classification_v0.04.json" # predict bool feature for using special equipment
-ML_SCALER_PATH = "ml_models/scaler_v0.04.joblib"
-SCALER_FEATURES_PATH = "ml_models/train_features_v0.04.joblib"
-NUM_CORE_FEATURES = 79
-CATEGORICALS_FEATURES = ['material_bar']
+ML_SCALER_PATH = "ml_models/scaler_v0.04.joblib" 
+REGRESSOR_FEATURES_PATH = "ml_models/cbm_v0_features.pkl" 
+CLASSIFIER_SCALER_FEATURES_PATH = "ml_models/train_features_v0.04.joblib" 
+NUM_CORE_CLASSIFIER_FEATURES = 79 
+CLASSIFIER_CATEGORICAL_FEATURES = ['material_bar'] 
+REGRESSOR_CATEGORICAL_FEATURES = ['material_bar', 'material_name_main']
 ML_CLUSTERER_PATH = "ml_models/kmeans_v0.04.joblib"
 ML_REDUCER_PATH = "ml_models/pca_v0.04.joblib"
 ENCODER_PATH = "ml_models/ohe_v0.04.joblib"
@@ -534,49 +536,50 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "thermal_conductivity": 45,
         "relative_coef": 1.25
     },
-    # "alum_6061": {
-    #     "label": "Алюминий 6061", "family": "alum", "density": 2700.0, "k_handle": 0.03,
-    #     "applicable_processes": ["cnc_milling", "cnc_lathe", "painting"],
-    #     "forms": {"plate": {"price": 544.0}, "rod": {"price": 115.0}, "hexagon": {"price": 594.0}}
-    # },
-    # "alum_D16T": {
-    #     "label": "Алюминий Д16Т", 
-    #     "family": "alum", 
-    #     "density": 2800.0, 
-    #     "k_handle": 0.03,
-    #     "applicable_processes": ["cnc_milling", "cnc_lathe", "painting"],
-    #     "forms": {"plate": {"price": 544.0}, "rod": {"price": 115.0}, "hexagon": {"price": 594.0}}
-    # },
-    # "plastic_default": {
-    #     "label": "Пластик по умолчанию", "family": "plastic", "density": 1200.0, "k_handle": 0.055,
-    #     "applicable_processes": ["printing", "cnc_milling", "cnc_lathe", "painting"],
-    #     "forms": {"sheet": {"price": 110.0}, "rod": {"price": 110.0}}
-    # },
-    #"plastic_pvh": {
-    #    "label": "Поливинилхлорид ПВХ", "family": "plastic", "density": 1080.0, "k_handle": 0.055,
-    #    "applicable_processes": ["printing", "cnc_lathe", "painting"],
-    #    "forms": {"sheet": {"price": 110.0}, "rod": {"price": 110.0}}
-    #},
-    #"plastic_pla": {
-    #    "label": "Plastic PLA", "family": "plastic", "density": 1240.0, "k_handle": 0.055,
-    #    "applicable_processes": ["printing", "cnc_milling", "cnc_lathe", "painting"],
-    #    "forms": {"sheet": {"price": 110.0}, "rod": {"price": 110.0}}
-    #},
-    #"wood":  {
-    #    "label": "Дерево",  "family": "wood", "density": 520.0, "k_handle": 0.03,
-    #    "applicable_processes": ["cnc_milling", "cnc_lathe", "painting"],
-    #    "forms": {"plate": {"price": 30.0}, "bar": {"price": 35.0}}
-    #},
-    #"wood_oak":   {
-    #    "label": "Wood Oak",   "family": "wood", "density": 700.0, "k_handle": 0.03,
-    #    "applicable_processes": ["cnc_milling", "cnc_lathe", "painting"],
-    #    "forms": {"plate": {"price": 40.0}, "bar": {"price": 45.0}}
-    #},
-    #"wood_birch": {
-    #    "label": "Wood Birch", "family": "wood", "density": 650.0, "k_handle": 0.03,
-    #    "applicable_processes": ["cnc_milling", "cnc_lathe", "painting"],
-    #    "forms": {"plate": {"price": 35.0}, "bar": {"price": 40.0}}
-    #}
+    "alum_АК7pch": {
+        "label": "Алюминий АК7пч", 
+        "family": "alum", 
+        # "density": 2770.0, 
+        # "k_handle": 0.0,
+        "applicable_processes": ["other"],
+        "forms": {
+            "sheet": {
+                # "price": 856.53,
+                "applicable_processes": ["other"],
+            }, 
+        },
+        "material_name": "АК7пч",
+        "material_name_main": "Алюминий",
+        # "material_coef": 0.8,
+        "material_group": "Цветные",
+        # "material_name_group": "Алюминиевый деформируемый сплав",
+        # "hardness": 100,
+        # "strenghtness": 335,
+        # "thermal_conductivity": 150,
+        # "relative_coef": 0.85
+    },
+    "other": {
+        "label": "Другой", 
+        "family": "other", 
+        # "density": 2770.0, 
+        # "k_handle": 0.0,
+        "applicable_processes": ["other"],
+        "forms": {
+            "sheet": {
+                # "price": 856.53,
+                "applicable_processes": ["other"],
+            }, 
+        },
+        "material_name": "other",
+        "material_name_main": "other",
+        # "material_coef": 0.8,
+        "material_group": "other",
+        # "material_name_group": "Алюминиевый деформируемый сплав",
+        # "hardness": 100,
+        # "strenghtness": 335,
+        # "thermal_conductivity": 150,
+        # "relative_coef": 0.85
+    }
 }
 
 PAINT_COEFFICIENTS = {
@@ -649,6 +652,8 @@ OTHER_SERVICES = {
     "5": {"label": "Шлифование", "service": "grinding"},
     "6": {"label": "Сварочные работы", "service": "welding"},
     "7": {"label": "Покрасочные работы", "service": "painting"},
+    "8": {"label": "Литьё", "service": "casting"},
+    "9": {"label": "Другое", "service": "other"},
 }
 
 # Default values for calculations
@@ -736,15 +741,15 @@ HTTP_STATUS_CODES = {
 LOCATIONS = {
     "location_1": {
         "name": "rudnevo",
-        "russian_name": "ЦКП"
+        "label": "ЦКП"
     },
     "location_2": {
         "name": "dubna",
-        "russian_name": "АО_ДМЗ"
+        "label": 'АО "ДМЗ"'
     },
     "location_3": {
         "name": "saransk",
-        "russian_name": "КТ-Спектр"
+        "label": 'АО "КТ-Спектр"'
     },
 }
 

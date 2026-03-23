@@ -43,7 +43,6 @@ DEFAULT_PARAMS = {
         "material_id": "PA11",
         "material_form": "powder",
         "quantity": 1,
-        "n_dimensions": 1,
         "k_type": 1.0,
         "k_process": 1.0,
         "cover_id": ["1"],

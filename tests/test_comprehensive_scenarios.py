@@ -276,13 +276,12 @@ def test_rule_based_scenarios():
             "dimensions": {
                 "length": 100.0,
                 "width": 50.0,
-                "thickness": 10.0
+                "height": 10.0
             },
             "quantity": 1,
             "material_id": "PA11",
             "material_form": "powder",
             "cover_id": ["1"],
-            "n_dimensions": 3,
             "k_type": 1.0,
             "k_process": 1.0
         }, "rule_based"),
@@ -293,7 +292,7 @@ def test_rule_based_scenarios():
             "dimensions": {
                 "length": 80.0,
                 "width": 60.0,
-                "thickness": 15.0
+                "height": 15.0
             },
             "quantity": 1,
             "material_id": "alum_D16",
@@ -309,7 +308,7 @@ def test_rule_based_scenarios():
             "dimensions": {
                 "length": 50.0,
                 "width": 50.0,
-                "thickness": 100.0
+                "height": 100.0
             },
             "quantity": 1,
             "material_id": "alum_D16",
@@ -325,7 +324,7 @@ def test_rule_based_scenarios():
             "dimensions": {
                 "length": 120.0,
                 "width": 80.0,
-                "thickness": 5.0
+                "height": 5.0
             },
             "quantity": 1,
             "material_id": "PA11",

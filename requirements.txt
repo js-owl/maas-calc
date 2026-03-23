@@ -7,24 +7,28 @@ uvicorn[standard]
 python-multipart
 
 # 3D file processing and STP analysis
-numpy-stl
-stl
+# numpy-stl NOT USE
+# stl NOT USE
 trimesh
 cadquery==2.5.2
 #OCP>=0.1.9
 
 # Scientific computing
 numpy
-scipy
-shapely
-meshio
+# scipy NOT USE
+# shapely NOT USE
+# meshio NOT USE
 
 # Machine learning
 joblib==1.5.2
 pandas==2.3.2
-xgboost==3.0.4
+xgboost==3.1.3
 scikit-learn>=1.3.0
+catboost
 
 # Utilities
 requests
-openpyxl
+#openpyxl NOT USE
+
+# PREVIEWS
+pyglet<2

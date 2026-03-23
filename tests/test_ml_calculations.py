@@ -24,7 +24,7 @@ class TestMLCalculations:
             'dimensions': {
                 'length': 10.0,
                 'width': 5.0,
-                'thickness': 5.0
+                'height': 5.0
             },
             'volume': 1000.0,
             'surface_area': 500.0,
@@ -55,7 +55,7 @@ class TestMLCalculations:
     
     def test_ml_predictor_feature_extraction(self):
         """Test feature extraction from file features"""
-        features = ml_predictor.extract_features_from_file(self.mock_ml_features)
+        features = ml_predictor.extract_classifier_features_from_file(self.mock_ml_features)
         
         assert features is not None
         assert 'volume' in features
@@ -76,9 +76,9 @@ class TestMLCalculations:
             'material_coef': 1.5
         }
         
-        features = ml_predictor.extract_features_from_file(self.mock_ml_features)
+        features = ml_predictor.extract_classifier_features_from_file(self.mock_ml_features)
         if features:
-            processed_features = ml_predictor.preprocess_features(features, material_info)
+            processed_features = ml_predictor.preprocess_features(features, material_info, 'classifier')
             # Note: This may return None if models are not available
             # The test verifies the method can be called without errors
     
@@ -88,7 +88,7 @@ class TestMLCalculations:
         if not ml_predictor.is_model_available():
             pytest.skip("ML models not available")
         
-        features = ml_predictor.extract_features_from_file(self.mock_ml_features)
+        features = ml_predictor.extract_classifier_features_from_file(self.mock_ml_features)
         material_info = {
             'material_bar': 'test_bar',
             'material_name': 'Test Material',
@@ -126,7 +126,7 @@ class TestMLCalculations:
         # Test without ML features
         params_without_ml = {
             'service_id': 'printing',
-            'dimensions': {'length': 10, 'width': 10, 'thickness': 10}
+            'dimensions': {'length': 10, 'width': 10, 'height': 10}
         }
         
         should_use_ml = router.should_use_ml(params_without_ml)
@@ -254,7 +254,7 @@ class TestMLCalculations:
             "dimensions": {
                 "length": 10.0,
                 "width": 10.0,
-                "thickness": 10.0
+                "height": 10.0
             },
             "quantity": 1,
             "material_id": "PA11",
@@ -293,7 +293,7 @@ class TestMLCalculations:
     def test_ml_constants_configuration(self):
         """Test ML constants are properly configured"""
         from constants import (ENABLE_ML_MODELS, ML_FALLBACK_TO_RULES, ML_REGRESSOR_PATH,
-                               ML_CLASSIFIER_PATH, ML_SCALER_PATH, SCALER_FEATURES_PATH,
+                               ML_CLASSIFIER_PATH, ML_SCALER_PATH, CLASSIFIER_SCALER_FEATURES_PATH,
                                ML_CLUSTERER_PATH, ML_REDUCER_PATH,
                                ENCODER_PATH)
         
@@ -302,11 +302,11 @@ class TestMLCalculations:
         assert isinstance(ML_REGRESSOR_PATH, str)
         assert isinstance(ML_CLASSIFIER_PATH, str)
         assert isinstance(ML_SCALER_PATH, str)
-        assert isinstance(SCALER_FEATURES_PATH, str)
+        assert isinstance(CLASSIFIER_SCALER_FEATURES_PATH, str)
         assert isinstance(ML_CLUSTERER_PATH, str)
         assert isinstance(ML_REDUCER_PATH, str)
         assert isinstance(ENCODER_PATH, str)
-        assert ML_REGRESSOR_PATH.endswith('.json')
+        assert ML_REGRESSOR_PATH.endswith('.cbm')
         assert ENCODER_PATH.endswith('.joblib')
     
     def test_response_model_ml_fields(self):

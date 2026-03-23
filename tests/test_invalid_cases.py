@@ -5,12 +5,11 @@ def test_invalid_material_for_printing(client):
         "dimensions": {
             "length": 100,
             "width": 50,
-            "thickness": 10
+            "height": 10
         },
         "quantity": 1,
         "material_id": "alum_D16",
         "material_form": "sheet",
-        "n_dimensions": 1,
         "k_type": 1.0,
         "k_process": 1.0,
         "cover_id": ["1"],
@@ -31,7 +30,7 @@ def test_lathe_requires_rod_bar_tube(client):
         "dimensions": {
             "length": 100,
             "width": 20,
-            "thickness": 20
+            "height": 20
         },
         "quantity": 1,
         "material_id": "alum_D16",

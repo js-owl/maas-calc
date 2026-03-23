@@ -4,11 +4,19 @@ Standardized validation utilities
 
 from typing import Dict, Any, List, Optional
 from fastapi import HTTPException
-from constants import ERROR_MESSAGES, ERROR_CODES, MATERIALS, TOLERANCE, FINISH, COVER
+from constants import (
+    ERROR_MESSAGES, ERROR_CODES, MATERIALS, TOLERANCE, FINISH, COVER,
+    AUTO_SERVICES, OTHER_SERVICES
+)
 from utils.logging_utils import get_logger
 from utils.response_utils import ResponseWrapper
 
 logger = get_logger(__name__)
+
+VALID_SERVICES_LIST = []
+AUTO_SERVICES_LIST = [v["service"] for v in AUTO_SERVICES.values()]
+VALID_SERVICES_LIST.extend(AUTO_SERVICES_LIST)
+VALID_SERVICES_LIST.extend([v["service"] for v in OTHER_SERVICES.values()])
 
 class ValidationError(Exception):
     """Custom validation error with standardized message"""
@@ -26,7 +34,7 @@ class Validator:
     @staticmethod
     def validate_service_id(service_id: str) -> None:
         """Validate service ID"""
-        valid_services = ["printing", "cnc-milling", "cnc-lathe", "painting"]
+        valid_services = VALID_SERVICES_LIST
         if service_id not in valid_services:
             raise ValidationError(
                 field="service_id",
@@ -47,7 +55,7 @@ class Validator:
         material_info = MATERIALS[material_id]
         applicable_processes = material_info.get("applicable_processes", [])
         
-        if service_id not in applicable_processes:
+        if service_id in AUTO_SERVICES_LIST and service_id not in applicable_processes:
             raise ValidationError(
                 field="material_id",
                 message=f"Material {material_id} is not applicable for service {service_id}",
@@ -74,7 +82,7 @@ class Validator:
     @staticmethod
     def validate_dimensions(dimensions: Dict[str, float]) -> None:
         """Validate dimensions"""
-        required_fields = ["length", "width", "thickness"]
+        required_fields = ["length", "width", "height"]
         
         for field in required_fields:
             if field not in dimensions:
@@ -215,11 +223,11 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
         #         errors.append(e)
     
     # Validate dimensions if provided
-    if "dimensions" in request_data:
-        try:
-            Validator.validate_dimensions(request_data["dimensions"])
-        except ValidationError as e:
-            errors.append(e)
+    # if "dimensions" in request_data:
+    #     try:
+    #         Validator.validate_dimensions(request_data["dimensions"])
+    #     except ValidationError as e:
+    #         errors.append(e)
     
     # Validate quantity if provided
     if "quantity" in request_data:

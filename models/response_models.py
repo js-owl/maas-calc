@@ -43,7 +43,6 @@ class UnifiedCalculationResponse(BaseModel):
     
     # Service-specific fields (optional based on service type)
     # 3D Printing specific
-    n_dimensions: Optional[int] = Field(None, description="Number of dimensions (3D printing)")
     k_type: Optional[float] = Field(None, description="Type coefficient (3D printing)")
     k_process: Optional[float] = Field(None, description="Process coefficient (3D printing)")
     

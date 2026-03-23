@@ -95,7 +95,7 @@ class STLExtractor(FileParameterExtractor):
             dimensions = {
                 'length': obb_x,
                 'width': obb_y,
-                'thickness': obb_z
+                'height': obb_z
             }
             
             # Calculate derived features

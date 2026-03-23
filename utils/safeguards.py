@@ -16,20 +16,19 @@ class SafeguardManager:
     def __init__(self):
         self.defaults = {
             "printing": {
-                "dimensions": Dimensions(length=100.0, width=50.0, thickness=10.0),
+                "dimensions": Dimensions(length=100.0, width=50.0, height=10.0),
                 "quantity": 1,
                 "material_id": "PA11",
                 "material_form": MaterialForm.POWDER,
                 "cover_id": DEFAULTS["cover_id_list"],
                 "location": DEFAULTS["location"],
-                "n_dimensions": DEFAULTS["n_dimensions"],
                 "k_type": DEFAULTS["k_type"],
                 "k_process": DEFAULTS["k_process"],
                 "k_otk": DEFAULTS["k_otk"],
                 "k_cert": []
             },
             "cnc-milling": {
-                "dimensions": Dimensions(length=100.0, width=50.0, thickness=10.0),
+                "dimensions": Dimensions(length=100.0, width=50.0, height=10.0),
                 "quantity": 1,
                 "material_id": "alum_D16",
                 "material_form": MaterialForm.SHEET,
@@ -42,7 +41,7 @@ class SafeguardManager:
                 "cnc_setup_time": DEFAULTS["cnc_setup_time"]
             },
             "cnc-lathe": {
-                "dimensions": Dimensions(length=100.0, width=50.0, thickness=10.0),
+                "dimensions": Dimensions(length=100.0, width=50.0, height=10.0),
                 "quantity": 1,
                 "material_id": "alum_D16",
                 "material_form": MaterialForm.ROD,
@@ -55,7 +54,7 @@ class SafeguardManager:
                 "cnc_setup_time": DEFAULTS["cnc_setup_time"]
             },
             "painting": {
-                "dimensions": Dimensions(length=100.0, width=50.0, thickness=10.0),
+                "dimensions": Dimensions(length=100.0, width=50.0, height=10.0),
                 "quantity": 1,
                 "material_id": "alum_D16",
                 "material_form": MaterialForm.SHEET,
@@ -128,4 +127,4 @@ class SafeguardManager:
     def get_default_dimensions(self, service_id: str) -> Dimensions:
         """Get default dimensions for service"""
         defaults = self.defaults.get(service_id, {})
-        return defaults.get("dimensions", Dimensions(length=100.0, width=50.0, thickness=10.0))
+        return defaults.get("dimensions", Dimensions(length=100.0, width=50.0, height=10.0))

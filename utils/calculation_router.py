@@ -170,15 +170,19 @@ class CalculationRouter:
                 return type('MLPaintingRequest', (), base_params)()
         
         if service_id == "printing":
+            try:
+                dimensions = parameters.get("ml_features", {}).get("dimensions")
+            except:
+                dimensions = parameters.get("dimensions")
+
             return PrintingCalculationRequest(
                 file_id=file_id,
-                dimensions=parameters["dimensions"],
+                dimensions=dimensions,
                 material_id=parameters["material_id"],
                 material_form=parameters["material_form"],
                 quantity=parameters["quantity"],
                 cover_id=parameters["cover_id"],
                 location=parameters["location"],
-                n_dimensions=parameters["n_dimensions"],
                 k_type=parameters["k_type"],
                 k_process=parameters["k_process"],
                 k_otk=parameters["k_otk"],

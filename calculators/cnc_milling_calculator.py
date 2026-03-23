@@ -41,7 +41,7 @@ class CNCMillingCalculator(BaseCalculator):
             calc_params = {
                 "length": request.dimensions.length,
                 "width": request.dimensions.width,
-                "thickness": request.dimensions.thickness,
+                "height": request.dimensions.height,
                 "quantity": request.quantity,
                 "material_id": request.material_id,
                 "material_form": request.material_form,

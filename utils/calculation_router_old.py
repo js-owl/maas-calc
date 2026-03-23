@@ -169,7 +169,6 @@ class CalculationRouter:
                 quantity=parameters["quantity"],
                 cover_id=parameters["cover_id"],
                 location=parameters["location"],
-                n_dimensions=parameters["n_dimensions"],
                 k_type=parameters["k_type"],
                 k_process=parameters["k_process"],
                 k_otk=parameters["k_otk"],

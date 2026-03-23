@@ -4,14 +4,20 @@ Modular architecture with unified API
 """
 
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from pathlib import Path
+from starlette.concurrency import run_in_threadpool
 
 # Import our modular components
 from models import UnifiedCalculationRequest, UnifiedCalculationResponse
 from utils import ParameterExtractor, SafeguardManager, CalculationRouter
+from utils.generate_previews import (
+    b64, generate_preview_images_sync, png_placeholder,
+    PREVIEW_SUPPORTED_EXT
+)
 from utils.response_utils import ResponseWrapper, add_response_metadata
 from utils.logging_utils import get_logger, set_request_id
 from utils.middleware import RequestTrackingMiddleware
@@ -115,10 +121,30 @@ async def calculate_price(request: UnifiedCalculationRequest):
         file_id=request.file_id or "unknown",
         request_id=getattr(request, 'request_id', None)
     )
+
+    AUTO_SERVICES_LIST = [v["service"] for v in AUTO_SERVICES.values()]
+
+    if (request.service_id=="cnc-milling" and request.file_data is None) or\
+        (request.service_id not in AUTO_SERVICES_LIST):
+        logger.info("Default request!")
+        result = UnifiedCalculationResponse(
+            service_id=request.service_id,
+            part_price=0,
+            detail_price=0,
+            part_price_one=0,
+            detail_price_one=0,
+            total_price=0,
+            total_time=0,
+            calculation_method="rule_based"
+        )
+        return ResponseWrapper.success_response(
+            data=result.model_dump(),
+            message=f"Calculation completed successfully for {request.service_id}",
+            request_id=getattr(request, 'request_id', None)
+        )
     # logging request to dev
-    filtered_request = {k: v for k, v in request_data.items() if k != "file_data"}
-    logger.info(f"============================= Request: поля: {list(request_data.keys())}, Request data without file_data {filtered_request}")
-    
+    # filtered_request = {k: v for k, v in request_data.items() if k != "file_data"}
+    # logger.info(f"============================= Request: поля: {list(request_data.keys())}, Request data without file_data {filtered_request}")
     try:
         # Step 1: Extract parameters from file if provided
         extracted_params = {}
@@ -158,13 +184,13 @@ async def calculate_price(request: UnifiedCalculationRequest):
             safeguarded_params, 
             use_ml=use_ml
         )
-        print('======================================= main.py calculate_price() result:', result.model_dump())
+        logger.info('======================================= main.py calculate_price() result:', result.model_dump())
         
         # Step 5: Add file information and calculation engine info
         if request.file_name:
             result.filename = request.file_name
-        if extracted_params.get('extracted_dimensions'):
-            result.extracted_dimensions = extracted_params['extracted_dimensions']
+        # if extracted_params.get('extracted_dimensions'):
+        #     result.extracted_dimensions = extracted_params['extracted_dimensions']
         
         # Set calculation engine
         result.calculation_engine = "ml_model" if use_ml else "rule_based"
@@ -216,6 +242,57 @@ async def calculate_price(request: UnifiedCalculationRequest):
         )
 
 
+@app.post("/generate-previews", tags=["Files"])
+async def generate_previews(
+    file: UploadFile = File(...),
+    size: int = Query(512, ge=64, le=2048, description="PNG square size"),
+    views: int = Query(1, ge=1, le=4, description="Number of rendered views (1..4)")
+):
+    """Generate PNG preview images for a 3D model (.stl, .stp, .step).
+
+    Important: this endpoint ONLY generates images and returns them (base64).
+    Persisting the final previews should be done by the caller service.
+    """
+    filename = file.filename or "model"
+    ext = Path(filename).suffix.lower()
+
+    if ext not in PREVIEW_SUPPORTED_EXT:
+        return ResponseWrapper.calculation_error(
+            message=f"Unsupported file type for preview: {ext}. \
+                Supported: {sorted(PREVIEW_SUPPORTED_EXT)}"
+        )
+
+    try:
+        file_bytes = await file.read()
+        if not file_bytes:
+            return ResponseWrapper.calculation_error(
+                message="Empty uploaded file"
+            )
+        import asyncio
+        try:
+            images = await run_in_threadpool(
+                generate_preview_images_sync, file_bytes, ext, size, views, # timeout=10
+                )
+        except asyncio.TimeoutError:
+            images = [png_placeholder(size)]
+
+        data = {
+            "filename": filename,
+            "ext": ext,
+            "size": size,
+            "views": views,
+            "images_png_base64": [b64(img) for img in images],
+        }
+        return ResponseWrapper.success_response(
+            data, "Preview images generated successfully"
+        )
+
+    except Exception as e:
+        logger.exception("Preview generation failed")
+        return ResponseWrapper.calculation_error(
+            message=f"Preview generation failed: {e}"
+        )
+
 @app.get("/materials", tags=["Configuration"])
 async def list_materials(process: Optional[str] = None):
     """List available materials, optionally filtered by process"""
@@ -243,7 +320,7 @@ async def list_materials(process: Optional[str] = None):
 
 @app.get("/services", tags=["Configuration"])
 async def list_services():
-    """List available manufacturing services"""
+    """List all available manufacturing services"""
     data = {
         "services": [v['service'] for k, v in AUTO_SERVICES.items()] + [v['service'] for k, v in OTHER_SERVICES.items()]
     }
@@ -252,11 +329,43 @@ async def list_services():
 
 @app.get("/auto_services", tags=["Configuration"])
 async def list_services():
-    """List available manufacturing services"""
+    """
+    List available manufacturing services
+    with auto price calculation
+    """
     data = {
-        "services": [{"id": k, **v} for k, v in AUTO_SERVICES.items()],
+        "auto_services": [{"id": k, **v} for k, v in AUTO_SERVICES.items()],
     }
     return ResponseWrapper.success_response(data, "Services retrieved successfully")
+
+
+@app.get("/other_services", tags=["Configuration"])
+async def list_locations():
+    """
+    List available other manufacturing services 
+    without auto price calculations.
+    """
+    data = {
+        "other_services": [{"id": k, **v} for k, v in OTHER_SERVICES.items()]
+    }
+    return ResponseWrapper.success_response(data, "Other services retrieved successfully")
+
+
+@app.get("/all_services", tags=["Configuration"])
+async def list_all_services():
+    """Return all available services from AUTO_SERVICES and OTHER_SERVICES"""
+    services = []
+
+    # Add auto services
+    services.extend([{"id": v["service"], "label": v["label"]} for v in AUTO_SERVICES.values()])
+
+    # Add other services
+    services.extend([{"id": v["service"], "label": v["label"]} for v in OTHER_SERVICES.values()])
+
+    data = {
+        "all_services": services
+    }
+    return ResponseWrapper.success_response(data, "All services retrieved successfully")
 
 
 @app.get("/coefficients", tags=["Configuration"])
@@ -279,18 +388,6 @@ async def list_locations():
         "locations": [{"id": k, **v} for k, v in LOCATIONS.items()]
     }
     return ResponseWrapper.success_response(data, "Locations retrieved successfully")
-
-
-@app.get("/other_services", tags=["Configuration"])
-async def list_locations():
-    """
-    List available other manufacturing services 
-    without auto price calculations.
-    """
-    data = {
-        "other_services": [{"id": k, **v} for k, v in OTHER_SERVICES.items()]
-    }
-    return ResponseWrapper.success_response(data, "Other services retrieved successfully")
 
 
 if __name__ == "__main__":

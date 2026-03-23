@@ -92,7 +92,7 @@ class ParameterExtractor:
                 return Dimensions(
                     length=dimensions_data['length'],
                     width=dimensions_data['width'],
-                    thickness=dimensions_data['thickness']
+                    height=dimensions_data['height']
                 )
             except Exception as e:
                 logger.warning(f"Error creating Dimensions from file params: {e}")

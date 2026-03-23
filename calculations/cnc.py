@@ -37,7 +37,7 @@ def calculate_cnc_milling_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
 
     length = request_data["length"]
     width = request_data["width"]
-    thickness = request_data["thickness"]
+    height = request_data["height"]
     quantity = request_data["quantity"]
     material_id = request_data["material_id"]
     material_form = request_data["material_form"]
@@ -51,13 +51,13 @@ def calculate_cnc_milling_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
     part_sizes = {
         "length": length,
         "width": width,
-        "thickness": thickness
+        "height": height
     }
     suitable_machines = check_machines(part_sizes, "milling", location)
 
     material_props = resolve_material(material_id, material_form, process="cnc-milling")
     
-    mat_volume = calculate_mat_volume(length, width, thickness)
+    mat_volume = calculate_mat_volume(length, width, height)
     mat_weight = calculate_mat_weight(mat_volume, material_props["density"])
     mat_price = calculate_mat_price(mat_weight, material_props["price"])
     work_price = calculate_work_price(mat_weight, material_props["k_handle"], n_dimensions, location)
@@ -139,7 +139,7 @@ def calculate_cnc_lathe_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
     part_sizes = {
         "length": dia,
         "width": dia,
-        "thickness": length
+        "height": length
     }
     suitable_machines = check_machines(part_sizes, "lathe", location)
 

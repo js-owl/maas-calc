@@ -27,14 +27,14 @@ class Dimensions(BaseModel):
     """Dimensions extracted from file or provided manually"""
     length: float = Field(..., gt=0, description="Length in mm")
     width: float = Field(..., gt=0, description="Width in mm")
-    thickness: float = Field(..., gt=0, description="Thickness in mm")
+    height: float = Field(..., gt=0, description="height in mm")
     
     def volume(self) -> float:
         """Calculate volume in cubic mm"""
-        return self.length * self.width * self.thickness
+        return self.length * self.width * self.height
     
     def __str__(self) -> str:
-        return f"{self.length}x{self.width}x{self.thickness} mm"
+        return f"{self.length}x{self.width}x{self.height} mm"
 
 
 class ServiceType(str, Enum):

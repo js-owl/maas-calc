@@ -40,7 +40,7 @@ def calculate_printing_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
 
     length = request_data["length"]
     width = request_data["width"]
-    thickness = request_data["thickness"]
+    height = request_data["height"]
     quantity = request_data["quantity"]
     material_id = request_data["material_id"]
     material_form = request_data["material_form"]
@@ -52,7 +52,7 @@ def calculate_printing_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
     part_sizes = {
         "length": length,
         "width": width,
-        "thickness": thickness
+        "height": height
     }
     suitable_machines = check_machines(part_sizes, service_id, location)
 
@@ -60,7 +60,7 @@ def calculate_printing_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
     
     reserve = 30
     mat_volume = calculate_mat_volume(
-        length+reserve, width+reserve, thickness+reserve
+        length+reserve, width+reserve, height+reserve
     ) # м3
     mat_weight = calculate_mat_weight(mat_volume, material_props["density"])
     mat_price = calculate_mat_price(mat_weight, material_props["price"])
@@ -78,11 +78,11 @@ def calculate_printing_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
     work_price_full = work_price * k_cover * k_otk * k_quantity
     
     # Calculate work price for one detail (quantity = 1)
-    work_price_full_one_detail = work_price * k_cover * k_otk * 1.0
+    work_price_full_one = work_price * k_cover * k_otk * 1.0
     
     # Calculate final prices using cost structure
     detail_price = calculate_cost(mat_price, work_price_full, location)
-    detail_price_one = calculate_cost(mat_price, work_price_full_one_detail, location)
+    detail_price_one = calculate_cost(mat_price, work_price_full_one, location)
     
     # Calculate manufacturing cycle
     manufacturing_cycle = calculate_cycle(cover_id, quantity, k_otk)
@@ -91,6 +91,16 @@ def calculate_printing_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
     total_price = detail_price * quantity
     total_time = work_time * quantity
     
+    # work price breakdown
+    work_price_breakdown={
+        'base_work_price': work_price,
+        'k_quantity': k_quantity,
+        'k_cover': k_cover,
+        'k_otk': k_otk,
+        'k_tolerance': 0,
+        'k_finish': 0,
+        'final_work_price': work_price_full
+    }
     return {
         "part_price": round(detail_price, 0),
         "detail_price": round(detail_price, 0),
@@ -101,9 +111,11 @@ def calculate_printing_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
         "mat_volume": mat_volume,
         "mat_weight": mat_weight,
         "mat_price": mat_price,
-        "work_price": work_price_full,
+        "work_price_full": work_price_full,
         "work_time": work_time,
         "k_quantity": k_quantity,
         "manufacturing_cycle": manufacturing_cycle,
-        "suitable_machines": suitable_machines
+        "suitable_machines": suitable_machines,
+        "material_price_per_kg": material_props["price"],
+        "work_price_breakdown": work_price_breakdown
     }

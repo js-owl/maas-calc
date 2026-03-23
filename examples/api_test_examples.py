@@ -29,12 +29,11 @@ TEST_DATA = {
         "dimensions": {
             "length": 100.0,
             "width": 50.0,
-            "thickness": 10.0
+            "height": 10.0
         },
         "quantity": 5,
         "material_id": "PA11",  # Порошок PA11 - real from constants
         "material_form": "powder",
-        "n_dimensions": 1,
         "k_type": 1.0,
         "k_process": 1.0,
         "cover_id": ["1"],  # Покраска - real from constants
@@ -48,7 +47,7 @@ TEST_DATA = {
         "dimensions": {
             "length": 80.0,
             "width": 60.0,
-            "thickness": 15.0
+            "height": 15.0
         },
         "quantity": 10,
         "material_id": "alum_D16",  # Алюминий Д16 - real from constants
@@ -67,7 +66,7 @@ TEST_DATA = {
         "dimensions": {
             "length": 120.0,
             "width": 25.0,  # diameter for lathe
-            "thickness": 25.0
+            "height": 25.0
         },
         "quantity": 8,
         "material_id": "alum_AMC",  # Алюминий АМц - real from constants
@@ -86,7 +85,7 @@ TEST_DATA = {
         "dimensions": {
             "length": 100.0,
             "width": 80.0,
-            "thickness": 5.0
+            "height": 5.0
         },
         "quantity": 15,
         "material_id": "alum_D16",  # Алюминий Д16 - real from constants
@@ -105,14 +104,14 @@ EDGE_CASES = {
     "minimal_parameters": {
         "service_id": "printing",
         "file_id": "minimal-test",
-        "dimensions": {"length": 1.0, "width": 1.0, "thickness": 1.0},
+        "dimensions": {"length": 1.0, "width": 1.0, "height": 1.0},
         "quantity": 1
     },
     
     "large_quantity": {
         "service_id": "cnc-milling",
         "file_id": "large-qty-test",
-        "dimensions": {"length": 50.0, "width": 50.0, "thickness": 10.0},
+        "dimensions": {"length": 50.0, "width": 50.0, "height": 10.0},
         "quantity": 1000,
         "material_id": "alum_D16",  # Real material
         "material_form": "sheet"
@@ -121,7 +120,7 @@ EDGE_CASES = {
     "multiple_cover_types": {
         "service_id": "printing",
         "file_id": "multi-cover-test",
-        "dimensions": {"length": 50.0, "width": 50.0, "thickness": 5.0},
+        "dimensions": {"length": 50.0, "width": 50.0, "height": 5.0},
         "quantity": 3,
         "material_id": "PA12",  # Different plastic material
         "material_form": "powder",
@@ -131,7 +130,7 @@ EDGE_CASES = {
     "high_complexity_cnc": {
         "service_id": "cnc-milling",
         "file_id": "complex-cnc-test",
-        "dimensions": {"length": 200.0, "width": 150.0, "thickness": 50.0},
+        "dimensions": {"length": 200.0, "width": 150.0, "height": 50.0},
         "quantity": 2,
         "material_id": "alum_D16",  # Real material
         "material_form": "sheet",
@@ -144,7 +143,7 @@ EDGE_CASES = {
     "different_tolerance_levels": {
         "service_id": "cnc-lathe",
         "file_id": "tolerance-test",
-        "dimensions": {"length": 80.0, "width": 30.0, "thickness": 30.0},
+        "dimensions": {"length": 80.0, "width": 30.0, "height": 30.0},
         "quantity": 5,
         "material_id": "alum_AMC",  # Real material
         "material_form": "rod",
@@ -156,7 +155,7 @@ EDGE_CASES = {
     "different_paint_types": {
         "service_id": "painting",
         "file_id": "paint-test",
-        "dimensions": {"length": 60.0, "width": 40.0, "thickness": 3.0},
+        "dimensions": {"length": 60.0, "width": 40.0, "height": 3.0},
         "quantity": 20,
         "material_id": "alum_D16",  # Real material
         "material_form": "sheet",
@@ -172,14 +171,14 @@ INVALID_CASES = {
     "invalid_service": {
         "service_id": "invalid-service",
         "file_id": "error-test-001",
-        "dimensions": {"length": 10.0, "width": 10.0, "thickness": 10.0},
+        "dimensions": {"length": 10.0, "width": 10.0, "height": 10.0},
         "quantity": 1
     },
     
     "invalid_material": {
         "service_id": "printing",
         "file_id": "error-test-002",
-        "dimensions": {"length": 10.0, "width": 10.0, "thickness": 10.0},
+        "dimensions": {"length": 10.0, "width": 10.0, "height": 10.0},
         "quantity": 1,
         "material_id": "invalid_material",
         "material_form": "powder"
@@ -188,7 +187,7 @@ INVALID_CASES = {
     "invalid_dimensions": {
         "service_id": "printing",
         "file_id": "error-test-003",
-        "dimensions": {"length": -10.0, "width": 0.0, "thickness": 10.0},
+        "dimensions": {"length": -10.0, "width": 0.0, "height": 10.0},
         "quantity": 1
     },
     
@@ -339,7 +338,7 @@ def test_comprehensive_materials() -> None:
         {
             "service_id": "printing",
             "file_id": "material-test-pa11",
-            "dimensions": {"length": 50.0, "width": 30.0, "thickness": 8.0},
+            "dimensions": {"length": 50.0, "width": 30.0, "height": 8.0},
             "quantity": 3,
             "material_id": "PA11",
             "material_form": "powder"
@@ -347,7 +346,7 @@ def test_comprehensive_materials() -> None:
         {
             "service_id": "printing", 
             "file_id": "material-test-pa12",
-            "dimensions": {"length": 40.0, "width": 25.0, "thickness": 6.0},
+            "dimensions": {"length": 40.0, "width": 25.0, "height": 6.0},
             "quantity": 2,
             "material_id": "PA12",
             "material_form": "powder"
@@ -355,7 +354,7 @@ def test_comprehensive_materials() -> None:
         {
             "service_id": "cnc-milling",
             "file_id": "material-test-alum-d16",
-            "dimensions": {"length": 70.0, "width": 45.0, "thickness": 12.0},
+            "dimensions": {"length": 70.0, "width": 45.0, "height": 12.0},
             "quantity": 4,
             "material_id": "alum_D16",
             "material_form": "sheet",
@@ -365,7 +364,7 @@ def test_comprehensive_materials() -> None:
         {
             "service_id": "cnc-milling",
             "file_id": "material-test-alum-amc",
-            "dimensions": {"length": 60.0, "width": 35.0, "thickness": 10.0},
+            "dimensions": {"length": 60.0, "width": 35.0, "height": 10.0},
             "quantity": 6,
             "material_id": "alum_AMC",
             "material_form": "sheet",
@@ -394,7 +393,7 @@ def test_all_tolerance_finish_combinations() -> None:
         test_data = {
             "service_id": "cnc-milling",
             "file_id": f"tolerance-finish-test-{i+1}",
-            "dimensions": {"length": 50.0, "width": 30.0, "thickness": 8.0},
+            "dimensions": {"length": 50.0, "width": 30.0, "height": 8.0},
             "quantity": 2,
             "material_id": "alum_D16",
             "material_form": "sheet",
@@ -422,7 +421,7 @@ def test_all_cover_types() -> None:
         test_data = {
             "service_id": "printing",
             "file_id": f"cover-test-{i+1}",
-            "dimensions": {"length": 30.0, "width": 20.0, "thickness": 5.0},
+            "dimensions": {"length": 30.0, "width": 20.0, "height": 5.0},
             "quantity": 1,
             "material_id": "PA11",
             "material_form": "powder",
@@ -465,7 +464,7 @@ def test_all_paint_types() -> None:
         test_data = {
             "service_id": "painting",
             "file_id": f"paint-test-{i+1}",
-            "dimensions": {"length": 40.0, "width": 30.0, "thickness": 4.0},
+            "dimensions": {"length": 40.0, "width": 30.0, "height": 4.0},
             "quantity": 5,
             "material_id": "alum_D16",
             "material_form": "sheet",

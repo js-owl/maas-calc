@@ -22,11 +22,10 @@ def test_unified_endpoint_without_file():
         'dimensions': {
             'length': 100.0,
             'width': 50.0,
-            'thickness': 10.0
+            'height': 10.0
         },
         'material_id': 'PA11',
         'material_form': 'powder',
-        'n_dimensions': 1,
         'k_type': 1.0,
         'k_process': 1.0,
         'cover_id': ['1'],
@@ -69,7 +68,7 @@ def test_unified_endpoint_cnc_milling():
         'dimensions': {
             'length': 200.0,
             'width': 100.0,
-            'thickness': 25.0
+            'height': 25.0
         },
         'material_id': 'alum_D16',
         'material_form': 'sheet',

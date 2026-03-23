@@ -38,7 +38,7 @@ class CNCLatheCalculator(BaseCalculator):
             )
             
             # Prepare calculation parameters in the format expected by legacy functions
-            # CNC lathe uses diameter instead of width/thickness
+            # CNC lathe uses diameter instead of width/height
             calc_params = {
                 "length": request.dimensions.length,
                 "dia": request.dimensions.width,  # Use width as diameter for lathe

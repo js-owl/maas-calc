@@ -232,9 +232,9 @@ class InteractivePricingTester:
         request_data = {
             "service_id": "printing",
             "file_id": f"rule-{file_type}-{quantity}",
-            "length": 100.0, "width": 50.0, "thickness": 10.0,
+            "length": 100.0, "width": 50.0, "height": 10.0,
             "quantity": quantity, "material_id": "PA11", "material_form": "powder",
-            "n_dimensions": 5, "k_type": 1.0, "k_process": 1.0,
+            "k_type": 1.0, "k_process": 1.0,
             "cover_id": ["1"], "k_otk": 1.0, "k_cert": ["a", "f"], "location": "location_1"
         }
         
@@ -304,7 +304,7 @@ class InteractivePricingTester:
             "file_name": self.test_files_data[file_type]['name'],
             "file_type": file_type,
             "quantity": quantity, "material_id": "PA11", "material_form": "powder",
-            "n_dimensions": 5, "k_type": 1.0, "k_process": 1.0,
+            "k_type": 1.0, "k_process": 1.0,
             "cover_id": ["1"], "k_otk": 1.0, "k_cert": ["a", "f"], "location": "location_1"
         }
         

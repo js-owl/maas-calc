@@ -29,7 +29,6 @@ class UnifiedCalculationRequest(BaseModel):
     k_cert: Optional[List[str]] = Field(None, description="Override certification types")
     
     # Manufacturing-specific parameters
-    n_dimensions: Optional[int] = Field(None, description="Number of dimensions for 3D printing")
     k_type: Optional[float] = Field(None, ge=0, le=2, description="Type coefficient")
     k_process: Optional[float] = Field(None, ge=0, le=2, description="Process coefficient")
     k_otk: Optional[float] = Field(None, ge=0, le=2, description="Quality control coefficient")

@@ -13,9 +13,9 @@ from constants import (
 from models.base_models import MaterialForm
 
 
-def calculate_mat_volume(length: float, width: float, thickness: float) -> float:
+def calculate_mat_volume(length: float, width: float, height: float) -> float:
     """Calculate material volume in cubic meters"""
-    volume = 0.000000001 * length * width * thickness
+    volume = 0.000000001 * length * width * height
     return round(volume, 10)
 
 
@@ -25,12 +25,12 @@ def calculate_mat_volume_cylindrical(length: float, dia: float) -> float:
     return round(volume, 10)
 
 
-def calculate_mat_volume_printing(length: float, width: float, thickness: float, sifting_machine=False) -> float:
+def calculate_mat_volume_printing(length: float, width: float, height: float, sifting_machine=False) -> float:
     """Calculate material volume in cubic meters (for printing)"""
     if not sifting_machine:
-        volume = 0.000000001 * length * width * thickness
+        volume = 0.000000001 * length * width * height
     else:
-        volume = 0.000000001 * (length + 30) * (width + 30) * (thickness + 30)
+        volume = 0.000000001 * (length + 30) * (width + 30) * (height + 30)
     return round(volume, 10)
 
 
@@ -217,8 +217,8 @@ def calculate_cycle(cover_id: List[str], quantity: int, k_otk: float) -> float:
 
 def check_machines(part: dict, processing_type: str, location: str, mode="default") -> list:
     """Return list of machines for given part dimensions"""
-    if any(k not in part or part[k] is None for k in ("length", "width", "thickness")):
-        raise ValueError("Sizes of detail must contain 'length', 'width', 'thickness'. Also it all must not be None")
+    if any(k not in part or part[k] is None for k in ("length", "width", "height")):
+        raise ValueError("Sizes of detail must contain 'length', 'width', 'height'. Also it all must not be None")
     
     suitable_machines = []
     
@@ -237,7 +237,7 @@ def check_machines(part: dict, processing_type: str, location: str, mode="defaul
     elif processing_type in ("lathe", "cnc-lathe"):
         processing_type = processing_type.replace("cnc-", "")
         # For lathe, we check if the part is roughly cylindrical
-        x, y, z = part["length"], part["width"], part["thickness"]
+        x, y, z = part["length"], part["width"], part["height"]
         if abs(x - y) < max(x, y) * 0.1:  # Roughly cylindrical
             # Find suitable lathe machines from MACHINES constant
             for machine_id, machine_info in MACHINES.items():

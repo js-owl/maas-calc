@@ -5,6 +5,8 @@ services:
     #  dockerfile: Dockerfile
     image: ${NEXUS_PUSH_IMAGE:-nexus.maas.int.kronshtadt.ru:8443/maas-hosted/maas-prod-stl:latest}
     container_name: backend-calc
+    ports:
+      - "7000:7000"
     environment:
       - CORS_ORIGINS=["*"]
       - CORS_ALLOW_CREDENTIALS=true
