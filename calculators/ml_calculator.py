@@ -6,6 +6,7 @@ based on geometric features extracted from CAD files.
 """
 
 import logging
+import math
 import numpy as np
 from typing import Dict, Any, Optional
 from datetime import datetime
@@ -19,6 +20,7 @@ from models.calculation_models import (
     PaintingCalculationRequest
 )
 from utils.ml_predictor import ml_predictor
+from utils.composite_ml_predictor import composite_ml_predictor
 from constants import (
     COST_STRUCTURE, MATERIALS, TOLERANCE, 
     FINISH, COVER, SPECIAL_EQUIPMENT_COEF, 
@@ -240,6 +242,57 @@ class MLCalculator(BaseCalculator):
                 'material_price_special_equipment': 0.0
             }
     
+    def _calculate_composite_material_costs(self, request: Any) -> Dict[str, Any]:
+        """Calculate composite material consumption and cost by layers on a 1 m² base."""
+        try:
+            material_id = getattr(request, 'material_id', 'unknown')
+            material_form = getattr(request, 'material_form', 'unknown')
+            ml_features = getattr(request, 'ml_features', {}) or {}
+
+            material_data = get_material_info(material_id, material_form)
+            price_per_square_meter = float(material_data.get('price', 0.0) or 0.0)
+            one_layer_thickness_mm = float(material_data.get('one_layer_thickness', 0.0) or 0.0)
+            if one_layer_thickness_mm <= 0.0:
+                raise ValueError('Composite material one_layer_thickness must be > 0')
+
+            volume_mm3 = float(ml_features.get('volume', 0.0) or 0.0)
+            volume_with_margin_mm3 = volume_mm3 * 1.1
+            volume_m3 = volume_mm3 * 1e-9
+            volume_with_margin_m3 = volume_with_margin_mm3 * 1e-9
+
+            base_area_m2 = 1.0
+            required_stack_thickness_m = volume_with_margin_m3 / base_area_m2
+            one_layer_thickness_m = one_layer_thickness_mm * 1e-3
+            layer_count = max(1, int(math.ceil(required_stack_thickness_m / one_layer_thickness_m))) if volume_with_margin_m3 > 0 else 0
+            material_price = round(layer_count * price_per_square_meter, 2)
+
+            return {
+                'material_id': material_id,
+                'base_area_m2': base_area_m2,
+                'volume_m3': round(volume_m3, 9),
+                'volume_with_margin_m3': round(volume_with_margin_m3, 9),
+                'one_layer_thickness_mm': one_layer_thickness_mm,
+                'required_stack_thickness_mm': round(required_stack_thickness_m * 1e3, 6),
+                'layer_count': layer_count,
+                'price_per_square_meter': price_per_square_meter,
+                'material_price': material_price,
+                'estimated_weight_kg': None,
+            }
+        except Exception as e:
+            logger.warning(f"Error calculating composite material costs: {e}")
+            return {
+                'material_id': getattr(request, 'material_id', 'unknown'),
+                'base_area_m2': 1.0,
+                'volume_m3': 0.0,
+                'volume_with_margin_m3': 0.0,
+                'one_layer_thickness_mm': 0.0,
+                'required_stack_thickness_mm': 0.0,
+                'layer_count': 0,
+                'price_per_square_meter': 0.0,
+                'material_price': 0.0,
+                'estimated_weight_kg': None,
+            }
+
     def _get_key_features(self, ml_features: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract key features for response.
@@ -305,3 +358,110 @@ class MLPaintingCalculator(MLCalculator):
         super().__init__()
         self.service_id = "painting"
         self.calculation_method = "Painting ML Prediction"
+
+
+class MLCompositeCalculator(MLCalculator):
+    """ML-based calculator for composite labor prediction."""
+
+    def __init__(self):
+        super().__init__()
+        self.service_id = "composite"
+        self.calculation_method = "Composite ML Prediction"
+
+    async def calculate(self, request: Any) -> UnifiedCalculationResponse:
+        try:
+            self._log_calculation_start(request.file_id, "Composite ML prediction")
+            ml_features = getattr(request, "ml_features", None)
+            if not ml_features:
+                raise ValueError("No ML features provided for composite calculation")
+
+            material_id = getattr(request, "material_id", "unknown")
+            material_form = getattr(request, "material_form", "unknown")
+            material_info = get_material_info(material_id, material_form)
+
+            predicted_hours = composite_ml_predictor.predict_from_file_features(
+                ml_features,
+                material_info,
+            )
+            if predicted_hours is None:
+                raise ValueError("Composite ML prediction failed")
+
+            location = getattr(request, 'location', 'location_1')
+            quantity = max(int(getattr(request, 'quantity', 1) or 1), 1)
+            cover_id = getattr(request, 'cover_id', ['0'])
+            k_otk = float(getattr(request, 'k_otk', 1.0) or 1.0)
+
+            price_of_hour = COST_STRUCTURE.get(location, {}).get('price_of_hour', 0)
+            work_price = float(predicted_hours) * price_of_hour
+            k_quantity = calculate_k_quantity(quantity)
+            k_cover = calculate_cover_coefficient(cover_id)
+
+            work_price_full = work_price * k_cover * k_otk * k_quantity
+            work_price_full_one = work_price * k_cover * k_otk
+
+            material_costs = self._calculate_composite_material_costs(request)
+            material_price = float(material_costs.get('material_price', 0.0) or 0.0)
+
+            part_price, price_bw = calculate_cost(
+                material_price,
+                work_price_full,
+                location,
+                breakdown=True
+            )
+            detail_price = part_price
+            part_price_one = calculate_cost(
+                material_price,
+                work_price_full_one,
+                location
+            )
+            detail_price_one = part_price_one
+            total_price = detail_price * quantity
+
+            price_bw['price_per_square_meter'] = material_costs.get('price_per_square_meter', 0.0)
+            price_bw['one_layer_thickness_mm'] = material_costs.get('one_layer_thickness_mm', 0.0)
+            price_bw['required_stack_thickness_mm'] = material_costs.get('required_stack_thickness_mm', 0.0)
+            price_bw['layer_count'] = material_costs.get('layer_count', 0)
+            price_bw['mat_price_full'] = price_bw.get('mat_price', material_price)
+            price_bw['total_time'] = float(predicted_hours)
+            price_bw['total_price (include quantity)'] = total_price
+
+            manufacturing_cycle = calculate_cycle(cover_id, quantity, k_otk)
+
+            response_data = self._create_base_response(
+                file_id=request.file_id,
+                filename=getattr(request, "filename", None),
+                part_price=part_price,
+                detail_price=detail_price,
+                part_price_one=part_price_one,
+                detail_price_one=detail_price_one,
+                total_price=total_price,
+                total_time=float(predicted_hours),
+                mat_volume=material_costs.get('volume_with_margin_m3', 0.0),
+                mat_weight=material_costs.get('estimated_weight_kg'),
+                mat_price=material_price,
+                work_price=work_price_full_one,
+                work_time=float(predicted_hours),
+                k_quantity=k_quantity,
+                k_cover=k_cover,
+                k_otk=k_otk,
+                manufacturing_cycle=manufacturing_cycle,
+                suitable_machines=None,
+                extracted_dimensions=ml_features.get("dimensions"),
+                calculation_engine="ml_model",
+                ml_prediction_hours=float(predicted_hours),
+                features_extracted=self._get_key_features(ml_features),
+                material_costs=material_costs,
+                work_price_breakdown={
+                    'base_work_price': work_price,
+                    'k_quantity': k_quantity,
+                    'k_cover': k_cover,
+                    'k_otk': k_otk,
+                    'final_work_price': work_price_full,
+                },
+                total_price_breakdown=price_bw,
+            )
+            self._log_calculation_complete(request.file_id, "Composite ML prediction")
+            return UnifiedCalculationResponse(**response_data)
+        except Exception as e:
+            logger.error(f"Error in composite ML calculation for file_id {request.file_id}: {e}")
+            raise

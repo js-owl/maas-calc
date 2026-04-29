@@ -10,7 +10,7 @@ from .base_models import BaseModel, Dimensions, MaterialForm
 class UnifiedCalculationRequest(BaseModel):
     """Unified request model for price calculation with file_id tracking"""
     # Required fields
-    service_id: str = Field(..., description="Manufacturing service ID (printing, cnc-milling, cnc-lathe, painting)")
+    service_id: str = Field(..., description="Manufacturing service ID (printing, cnc-milling, cnc-lathe, painting, composite)")
     file_id: Optional[str] = Field(None, description="File ID from external service database for tracking")
     
     # File data (base64 encoded)

@@ -281,5 +281,7 @@ def get_material_info(material_id: str, material_form: str) -> Dict[str, Any]:
         'thermal_conductivity': material_data.get('thermal_conductivity', 0.0),
         'relative_coef': material_data.get('relative_coef', 0.0),
         'density': material_data.get('density', 0.0),
-        'price': material_form_data.get('price', 0.0)
+        'family': material_data.get('family', 'unknown'),
+        'price': material_form_data.get('price', 0.0),
+        'one_layer_thickness': material_form_data.get('one_layer_thickness', 0.0)
     }

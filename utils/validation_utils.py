@@ -185,7 +185,7 @@ class Validator:
     @staticmethod
     def validate_file_type(file_type: str, service_id: str) -> None:
         """Validate file type and service confirmity"""
-        if file_type=="stl" and service_id in ("cnc-milling", "cnc-lathe"):
+        if file_type=="stl" and service_id in ("cnc-milling", "cnc-lathe", "composite"):
             raise ValidationError(
                 field="file_type",
                 message=ERROR_MESSAGES["unsupported_file_type"],

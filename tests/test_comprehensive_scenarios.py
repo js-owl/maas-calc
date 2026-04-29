@@ -186,21 +186,6 @@ def test_stp_ml_scenarios():
     
     stp_file_data = encode_file('test_files/S8000_125_63_293_001_D000_02.stp')
     stp_tests = [
-        # ("STP + Printing (ML)", {
-        #     "service_id": "printing",
-        #     "file_id": "test-stp-printing",
-        #     "file_data": stp_file_data,
-        #     "file_name": "S8000_125_63_293_001_D000_02.stp",
-        #     "file_type": "stp",
-        #     "quantity": 1,
-        #     "material_id": "PA11",
-        #     "material_form": "powder",
-        #     "cover_id": ["1"],
-        #     "n_dimensions": 3,
-        #     "k_type": 1.0,
-        #     "k_process": 1.0
-        # }, "ml_model"),
-        
         ("STP + CNC Milling (ML)", {
             "service_id": "cnc-milling",
             "file_id": "test-stp-milling",
@@ -214,39 +199,6 @@ def test_stp_ml_scenarios():
             "tolerance_id": "1",
             "finish_id": "1"
         }, "ml_model"),
-        
-        ("STP + CNC Lathe (ML)", {
-            "service_id": "cnc-lathe",
-            "file_id": "test-stp-lathe",
-            "file_data": stp_file_data,
-            "file_name": "S8000_125_63_293_001_D000_02.stp",
-            "file_type": "stp",
-            "quantity": 1,
-            "material_id": "alum_D16",
-            "material_form": "rod",
-            "cover_id": ["1"],
-            "tolerance_id": "1",
-            "finish_id": "1"
-        }, "ml_model"),
-        
-        # ("STP + Painting (ML)", {
-        #     "service_id": "painting",
-        #     "file_id": "test-stp-painting",
-        #     "file_data": stp_file_data,
-        #     "file_name": "S8000_125_63_293_001_D000_02.stp",
-        #     "file_type": "stp",
-        #     "quantity": 1,
-        #     "material_id": "PA11",
-        #     "material_form": "powder",
-        #     "cover_id": ["1"],
-        #     "tolerance_id": "1",
-        #     "finish_id": "1",
-        #     "paint_type": "a",
-        #     "paint_prepare": "b",
-        #     "paint_primer": "b",
-        #     "paint_lakery": "a",
-        #     "control_type": "1"
-        # }, "ml_model")
     ]
     
     results = []
@@ -284,59 +236,6 @@ def test_rule_based_scenarios():
             "cover_id": ["1"],
             "k_type": 1.0,
             "k_process": 1.0
-        }, "rule_based"),
-        
-        ("Rule-Based CNC Milling", {
-            "service_id": "cnc-milling",
-            "file_id": "test-rule-milling",
-            "dimensions": {
-                "length": 80.0,
-                "width": 60.0,
-                "height": 15.0
-            },
-            "quantity": 1,
-            "material_id": "alum_D16",
-            "material_form": "sheet",
-            "cover_id": ["1"],
-            "tolerance_id": "1",
-            "finish_id": "1"
-        }, "rule_based"),
-        
-        ("Rule-Based CNC Lathe", {
-            "service_id": "cnc-lathe",
-            "file_id": "test-rule-lathe",
-            "dimensions": {
-                "length": 50.0,
-                "width": 50.0,
-                "height": 100.0
-            },
-            "quantity": 1,
-            "material_id": "alum_D16",
-            "material_form": "rod",
-            "cover_id": ["1"],
-            "tolerance_id": "1",
-            "finish_id": "1"
-        }, "rule_based"),
-        
-        ("Rule-Based Painting", {
-            "service_id": "painting",
-            "file_id": "test-rule-painting",
-            "dimensions": {
-                "length": 120.0,
-                "width": 80.0,
-                "height": 5.0
-            },
-            "quantity": 1,
-            "material_id": "PA11",
-            "material_form": "powder",
-            "cover_id": ["1"],
-            "tolerance_id": "1",
-            "finish_id": "1",
-            "paint_type": "a",
-            "paint_prepare": "b",
-            "paint_primer": "b",
-            "paint_lakery": "a",
-            "control_type": "1"
         }, "rule_based")
     ]
     

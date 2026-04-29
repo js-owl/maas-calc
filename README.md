@@ -108,11 +108,10 @@ graph TD
 
 2. **Quick start with Docker**
    ```bash
-   # Linux/Mac
-   ./start.sh prod
 
-   # Windows
-   start.bat prod
+  # Windows
+  cd maas-backend-stl
+  docker-compose -f docker-compose.dev.yml up -d
    ```
 
 3. **Access the API**

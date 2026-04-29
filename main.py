@@ -98,6 +98,7 @@ async def calculate_price(request: UnifiedCalculationRequest):
     - CNC Milling (cnc-milling) 
     - CNC Lathe (cnc-lathe)
     - Painting (painting)
+    - Composite labor forecast (composite)
     
     Supports file upload via base64 encoding and automatic parameter extraction.
     """
@@ -184,7 +185,7 @@ async def calculate_price(request: UnifiedCalculationRequest):
             safeguarded_params, 
             use_ml=use_ml
         )
-        logger.info('======================================= main.py calculate_price() result:', result.model_dump())
+        # logger.info('======================================= main.py calculate_price() result:', result.model_dump())
         
         # Step 5: Add file information and calculation engine info
         if request.file_name:

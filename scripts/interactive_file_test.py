@@ -34,7 +34,8 @@ SERVICES = {
     "1": {"id": "printing", "name": "3D Printing"},
     "2": {"id": "cnc-milling", "name": "CNC Milling"},
     "3": {"id": "cnc-lathe", "name": "CNC Lathe"},
-    "4": {"id": "painting", "name": "Painting"}
+    "4": {"id": "painting", "name": "Painting"},
+    "5": {"id": "composite", "name": "Composite"},
 }
 
 # Default parameters for quick test mode
@@ -85,7 +86,11 @@ DEFAULT_PARAMS = {
         "paint_lakery": "a",
         "control_type": "1",
         "k_cert": ["a", "f", "g"]
-    }
+    },
+    "composite": {
+        "material_id": "pre-preg_kmks-2m",
+        "quantity": 1,
+    },
 }
 
 class InteractiveFileTester:
@@ -329,7 +334,9 @@ class InteractiveFileTester:
             self._configure_cnc_params(params)
         elif service_id == "painting":
             self._configure_painting_params(params)
-        
+        elif service_id == "composite":
+            self._configure_composite_params(params)
+
         return params
     
     def _configure_printing_params(self, params: Dict[str, Any]):
@@ -526,6 +533,8 @@ class InteractiveFileTester:
         print(f"  File: {file_info['name']} ({file_info['size_mb']} MB)")
         print(f"  File ID: {request_data['file_id']}")
         print(f"  Parameters: {len(parameters)} configured")
+        if service_id == "composite":
+            print("  Debug: composite uses STP feature extraction + separate flexible_ensemble bundle")
         
         # Confirm upload
         confirm = self.get_user_input("Send request? (y/n)", ["y", "n", "yes", "no"])
@@ -550,7 +559,7 @@ class InteractiveFileTester:
             print(f"❌ Request error: {e}")
             return None
     
-    def display_results(self, results: Dict[str, Any]):
+    def display_results(self, results: Dict[str, Any], service_id: Optional[str] = None):
         """Display formatted results"""
         self.print_header("Calculation Results")
         
@@ -613,6 +622,27 @@ class InteractiveFileTester:
             if value is not None:
                 print(f"  {key}: {value:.3f}")
     
+    def _display_composite_debug_summary(self, results: Dict[str, Any]):
+        """Display a focused debug summary for composite inference."""
+        print("\n🧪 Composite Debug Summary:")
+        print(f"  Calculation engine: {results.get('calculation_engine', 'unknown')}")
+        print(f"  Calculation method: {results.get('calculation_method', 'unknown')}")
+        print(f"  Predicted labor: {results.get('ml_prediction_hours', results.get('total_time', 0)):.4f} hours")
+
+        dims = results.get('extracted_dimensions') or {}
+        if dims:
+            print("  Extracted dimensions:")
+            for key, value in dims.items():
+                print(f"    - {key}: {value}")
+
+        features = results.get('features_extracted') or {}
+        if features:
+            print(f"  Extracted feature count: {len(features)}")
+            for key in sorted(features.keys()):
+                print(f"    - {key}: {features[key]}")
+        else:
+            print("  No features_extracted in response")
+
     def save_results(self, results: Dict[str, Any], file_info: Dict[str, Any], service_id: str, request: Dict):
         """Save results to JSON file"""
         save_choice = self.get_user_input("\nSave results to file? (y/n)", ["y", "n", "yes", "no"])
@@ -655,6 +685,10 @@ class InteractiveFileTester:
             if not service_id:
                 continue
             
+            if service_id == "composite" and file_info["type"].lower() not in ["stp", "step"]:
+                print("❌ Composite debugging requires STP/STEP file input")
+                continue
+
             # Parameter mode selection
             self.print_header("Parameter Configuration")
             print("Parameter Modes:")
@@ -679,7 +713,7 @@ class InteractiveFileTester:
             results, request_data = self.upload_file(file_info, service_id, parameters, show_request=True)
             
             if results:
-                self.display_results(results)
+                self.display_results(results, service_id=service_id)
                 self.save_results(results, file_info, service_id, request_data)
             
             # Continue or exit

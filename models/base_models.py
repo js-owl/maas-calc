@@ -21,6 +21,7 @@ class MaterialForm(str, Enum):
     SHEET = "sheet"
     ROD = "rod"
     HEXAGON = "hexagon"
+    TEXTILE = "textile"
 
 
 class Dimensions(BaseModel):
@@ -43,6 +44,7 @@ class ServiceType(str, Enum):
     CNC_MILLING = "cnc-milling"
     CNC_LATHE = "cnc-lathe"
     PAINTING = "painting"
+    COMPOSITE = "composite"
 
 
 class CalculationMethod(str, Enum):
@@ -51,3 +53,4 @@ class CalculationMethod(str, Enum):
     CNC_MILLING_PRICE = "CNC Milling Price Calculation"
     CNC_LATHE_PRICE = "CNC Lathe Price Calculation"
     PAINTING_PRICE = "Painting Price Calculation"
+    COMPOSITE_ML = "Composite ML Prediction"

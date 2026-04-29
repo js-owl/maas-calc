@@ -2,6 +2,10 @@ from typing import Dict, Any
 
 APP_VERSION = "3.3.0"
 
+# Composite ML model configuration
+COMPOSITE_BUNDLE_PATH = "ml_models/bundle_metalcomposite_lgbm_base.pkl"
+ENABLE_COMPOSITE_MODEL = True
+
 # ML Model Configuration
 ML_REGRESSOR_PATH = "ml_models/cbm_v0.0.cbm" 
 ML_CLASSIFIER_PATH = "ml_models/base_model_xgb_classification_v0.04.json" # predict bool feature for using special equipment
@@ -561,24 +565,91 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "other": {
         "label": "Другой", 
         "family": "other", 
-        # "density": 2770.0, 
-        # "k_handle": 0.0,
         "applicable_processes": ["other"],
         "forms": {
             "sheet": {
-                # "price": 856.53,
                 "applicable_processes": ["other"],
             }, 
         },
         "material_name": "other",
         "material_name_main": "other",
-        # "material_coef": 0.8,
         "material_group": "other",
-        # "material_name_group": "Алюминиевый деформируемый сплав",
-        # "hardness": 100,
-        # "strenghtness": 335,
-        # "thermal_conductivity": 150,
-        # "relative_coef": 0.85
+
+    },
+    "carbon_22502": {
+        "label": "Ткань углеродная 22502", 
+        "family": "other", 
+        "applicable_processes": ["composite"],
+        "forms": {
+            "sheet": {
+                "one_layer_thickness": 0.208,
+                "price": 2921.0, # m2
+                "applicable_processes": ["composite"],
+            }, 
+        },
+        "material_name": "Ткань углеродная",
+        "material_name_main": "22502",
+        "material_group": "composite",
+    },
+    "pre-preg_v180": {
+        "label": "Препрег эпоксидный В180", 
+        "family": "pre-preg", 
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "one_layer_thickness": 0.2,
+                "price": 4930.0, # m2
+                "applicable_processes": ["composite"],
+            }, 
+        },
+        "material_name": "Препрег",
+        "material_name_main": "В180",
+        "material_group": "composite",
+    },
+    "t-10-14": {
+        "label": "Ткань стеклянная Т-10-14", 
+        "family": "glass", 
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "one_layer_thickness": 0.23,
+                "price": 370.0, # m2
+                "applicable_processes": ["composite"],
+            }, 
+        },
+        "material_name": "Ткань стеклянная",
+        "material_name_main": "Т-10-14",
+        "material_group": "composite",
+    },
+    "pre-preg_kps-2m": {
+        "label": "Препрег клеевой КПС-2м", 
+        "family": "pre-preg", 
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "one_layer_thickness": 0.23,
+                "price": 2693.0, # m2
+                "applicable_processes": ["composite"],
+            }, 
+        },
+        "material_name": "КПС",
+        "material_name_main": "Препрег",
+        "material_group": "composite",
+    },
+    "pre-preg_kmks-2m": {
+        "label": "Препрег клеевой КМКС-2м", 
+        "family": "pre-preg", 
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "one_layer_thickness": 0.23,
+                "price": 2712.0, # m2
+                "applicable_processes": ["composite"],
+            }, 
+        },
+        "material_name": "КМКС",
+        "material_name_main": "Препрег",
+        "material_group": "composite",
     }
 }
 
@@ -642,6 +713,7 @@ CERT_COSTS = {
 AUTO_SERVICES = {
     "1": {"label": "3D-печать", "service": "printing"},
     "2": {"label": "Механическая обработка", "service": "cnc-milling"},
+    "3": {"label": "Изготовление деталей из ПКМ", "service": "composite"},
 }
 
 OTHER_SERVICES = {
@@ -651,9 +723,13 @@ OTHER_SERVICES = {
     "4": {"label": "Лазерная резка", "service": "laser-cutting"},
     "5": {"label": "Шлифование", "service": "grinding"},
     "6": {"label": "Сварочные работы", "service": "welding"},
-    "7": {"label": "Покрасочные работы", "service": "painting"},
+    "7": {"label": "Нанесение ЛКМ", "service": "painting"},
     "8": {"label": "Литьё", "service": "casting"},
     "9": {"label": "Другое", "service": "other"},
+    "10": {"label": "Изготовление деталей из ПКМ", "service": "composite"},
+    "11": {"label": "Испытательные ресурсы", "service": "testing"},
+    "12": {"label": "Гальваника", "service": "electroplating"},
+    "13": {"label": "Производство из резины", "service": "rubber"}
 }
 
 # Default values for calculations
@@ -755,11 +831,11 @@ LOCATIONS = {
 
 COST_STRUCTURE = {
     "location_1": {
-        "price_of_hour": 874.57,
-        "dop_salary_coef": 0.1124,
-        "insurance_coef": 0.3170,
-        "overhead_expenses_coef": 1.7568,
-        "administrative_expenses_coef": 0.8731,
+        "price_of_hour": 732.91818,
+        "dop_salary_coef": 0.1,
+        "insurance_coef": 0.302,
+        "overhead_expenses_coef": 0.8573,
+        "administrative_expenses_coef": 0.8592,
         "profit_material": 0.01,
         "other_profit": 0.25
     },

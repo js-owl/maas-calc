@@ -16,7 +16,8 @@ from calculators.ml_calculator import (
     MLPrintingCalculator,
     MLCNCMillingCalculator,
     MLCNCLatheCalculator,
-    MLPaintingCalculator
+    MLPaintingCalculator,
+    MLCompositeCalculator
 )
 from models.calculation_models import (
     PrintingCalculationRequest,
@@ -26,6 +27,7 @@ from models.calculation_models import (
 )
 from models.response_models import UnifiedCalculationResponse
 from utils.ml_predictor import ml_predictor
+from utils.composite_ml_predictor import composite_ml_predictor
 from constants import ENABLE_ML_MODELS, ML_FALLBACK_TO_RULES
 
 logger = logging.getLogger(__name__)
@@ -52,6 +54,8 @@ class CalculationRouter:
                     self.calculators[calculator_key] = MLCNCLatheCalculator()
                 elif service_id == "painting":
                     self.calculators[calculator_key] = MLPaintingCalculator()
+                elif service_id == "composite":
+                    self.calculators[calculator_key] = MLCompositeCalculator()
             else:
                 # Use rule-based calculators
                 if service_id == "printing":
@@ -104,16 +108,20 @@ class CalculationRouter:
         Returns:
             True if ML should be used, False otherwise
         """
-        # Check if ML is enabled and models are available
-        if not ENABLE_ML_MODELS or not ml_predictor.is_model_available():
-            logger.warning("ML models are not available")
-            return False
-        
-        # check service type
         service_id = parameters.get('service_id', None)
-        if service_id not in ["cnc-milling", "cnc-lathe"]:
-            logger.warning(f"Incorrect service id: {service_id}")
-            return False
+
+        if service_id == "composite":
+            if not composite_ml_predictor.is_model_available():
+                logger.warning("Composite ML model is not available")
+                return False
+        else:
+            if not ENABLE_ML_MODELS or not ml_predictor.is_model_available():
+                logger.warning("ML models are not available")
+                return False
+
+            if service_id not in ["cnc-milling", "cnc-lathe"]:
+                logger.warning(f"Incorrect service id: {service_id}")
+                return False
         
         # Check if file features are available
         ml_features = parameters.get('ml_features')
@@ -168,13 +176,16 @@ class CalculationRouter:
                 return type('MLCNCLatheRequest', (), base_params)()
             elif service_id == "painting":
                 return type('MLPaintingRequest', (), base_params)()
+            elif service_id == "composite":
+                return type('MLCompositeRequest', (), base_params)()
         
         if service_id == "printing":
             try:
                 dimensions = parameters.get("ml_features", {}).get("dimensions")
+                if dimensions is None:
+                    dimensions = parameters.get("dimensions")
             except:
                 dimensions = parameters.get("dimensions")
-
             return PrintingCalculationRequest(
                 file_id=file_id,
                 dimensions=dimensions,
