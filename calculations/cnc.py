@@ -7,7 +7,7 @@ from .core import (
     resolve_material, calculate_mat_volume, calculate_mat_volume_cylindrical,
     calculate_mat_weight, calculate_mat_price, calculate_work_price, 
     calculate_work_time, calculate_k_quantity, calculate_k_complexity, 
-    calculate_cost, calculate_cycle, check_machines
+    calculate_cost, calculate_cycle, check_machines, calculate_billable_material_weight
 )
 from constants import TOLERANCE, FINISH, CERT_COSTS, COVER, MACHINES, DEFAULTS, ERROR_MESSAGES
 
@@ -58,10 +58,16 @@ def calculate_cnc_milling_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
     material_props = resolve_material(material_id, material_form, process="cnc-milling")
     
     mat_volume = calculate_mat_volume(length, width, height)
-    mat_weight = calculate_mat_weight(mat_volume, material_props["density"])
+    raw_mat_weight = calculate_mat_weight(mat_volume, material_props["density"])
+    material_usage = calculate_billable_material_weight(
+        raw_mat_weight,
+        quantity,
+        material_props.get("minimum_order_quantity"),
+    )
+    mat_weight = material_usage["billable_weight_per_unit_kg"]
     mat_price = calculate_mat_price(mat_weight, material_props["price"])
-    work_price = calculate_work_price(mat_weight, material_props["k_handle"], n_dimensions, location)
-    work_time = calculate_work_time(mat_weight, material_props["k_handle"], n_dimensions)
+    work_price = calculate_work_price(raw_mat_weight, material_props["k_handle"], n_dimensions, location)
+    work_time = calculate_work_time(raw_mat_weight, material_props["k_handle"], n_dimensions)
 
     k_quantity = calculate_k_quantity(quantity)
     k_complexity = calculate_k_complexity(n_dimensions)
@@ -110,6 +116,8 @@ def calculate_cnc_milling_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
         "total_time": round(total_time, 3),
         "mat_volume": mat_volume,
         "mat_weight": mat_weight,
+        "raw_mat_weight": raw_mat_weight,
+        "material_usage": material_usage,
         "mat_price": mat_price,
         "work_price": work_price_full,
         "work_time": work_time,
@@ -146,10 +154,16 @@ def calculate_cnc_lathe_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
     material_props = resolve_material(material_id, material_form, process="cnc-lathe")
     
     mat_volume = calculate_mat_volume_cylindrical(length, dia)
-    mat_weight = calculate_mat_weight(mat_volume, material_props["density"])
+    raw_mat_weight = calculate_mat_weight(mat_volume, material_props["density"])
+    material_usage = calculate_billable_material_weight(
+        raw_mat_weight,
+        quantity,
+        material_props.get("minimum_order_quantity"),
+    )
+    mat_weight = material_usage["billable_weight_per_unit_kg"]
     mat_price = calculate_mat_price(mat_weight, material_props["price"])
-    work_price = calculate_work_price(mat_weight, material_props["k_handle"], n_dimensions, location)
-    work_time = calculate_work_time(mat_weight, material_props["k_handle"], n_dimensions)
+    work_price = calculate_work_price(raw_mat_weight, material_props["k_handle"], n_dimensions, location)
+    work_time = calculate_work_time(raw_mat_weight, material_props["k_handle"], n_dimensions)
 
     k_quantity = calculate_k_quantity(quantity)
     k_complexity = calculate_k_complexity(n_dimensions)
@@ -198,6 +212,8 @@ def calculate_cnc_lathe_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
         "total_time": round(total_time, 3),
         "mat_volume": mat_volume,
         "mat_weight": mat_weight,
+        "raw_mat_weight": raw_mat_weight,
+        "material_usage": material_usage,
         "mat_price": mat_price,
         "work_price": work_price_full,
         "work_time": work_time,

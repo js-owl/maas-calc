@@ -28,7 +28,7 @@ from constants import (
 )
 from calculations.core import (
     calculate_k_quantity, calculate_cost, calculate_cover_coefficient,
-    calculate_cycle, check_machines, get_material_info
+    calculate_cycle, check_machines, get_material_info, calculate_billable_material_weight
 )
 
 logger = logging.getLogger(__name__)
@@ -141,6 +141,12 @@ class MLCalculator(BaseCalculator):
             price_bw["total_price (include quantity)"] = total_price
             
             price_bw["price_per_kg"] = material_costs.get('price_per_kg', 0.0) # add to front display
+            price_bw["minimum_order_quantity_kg"] = material_costs.get('minimum_order_quantity_kg')
+            price_bw["minimum_order_quantity_applied"] = material_costs.get('minimum_order_quantity_applied', False)
+            price_bw["raw_estimated_weight_kg"] = material_costs.get('raw_estimated_weight_kg', 0.0)
+            price_bw["billable_weight_kg"] = material_costs.get('billable_weight_kg', 0.0)
+            price_bw["billable_order_weight_kg"] = material_costs.get('billable_order_weight_kg', 0.0)
+            price_bw["raw_order_weight_kg"] = material_costs.get('raw_order_weight_kg', 0.0)
             price_bw["dop_mat_price"] = work_price * (k_cover - 1) # add to front display
             price_bw["mat_price_full"] = price_bw["mat_price"] + price_bw["dop_mat_price"] # add to front display
             price_bw["total_time"] = predicted_hours # add to front display
@@ -198,6 +204,7 @@ class MLCalculator(BaseCalculator):
         """Calculate material costs using rule-based approach"""
         try:
             service_id = getattr(request, 'service_id', 'unknown')
+            quantity = max(int(getattr(request, 'quantity', 1) or 1), 1)
             obb_x = getattr(request, 'obb_x', 0.0)
             obb_y = getattr(request, 'obb_y', 0.0)
             obb_z = getattr(request, 'obb_z', 0.0)
@@ -207,6 +214,7 @@ class MLCalculator(BaseCalculator):
             material_data = get_material_info(material_id, material_form)
             price_per_kg = material_data['price'] # rub/kg
             density = material_data['density'] # kg/m3
+            minimum_order_quantity = material_data.get('minimum_order_quantity')
 
             material_special_equipment_data = MATERIALS.get(SPECIAL_EQUIPMENT_MATERIAL, {})
             material_special_equipment_form_data = material_special_equipment_data["forms"].get(SPECIAL_EQUIPMENT_FORM, {})
@@ -219,14 +227,29 @@ class MLCalculator(BaseCalculator):
                 
             elif service_id=='cnc-lathe':
                 volume = np.pi * obb_x * obb_y * obb_z / 4 * 1.1 * 1e-9 # m3
+            else:
+                volume = 0.0
 
-            material_price = round(volume * density * price_per_kg, 2)
+            raw_weight = volume * density
+            material_usage = calculate_billable_material_weight(
+                raw_weight,
+                quantity,
+                minimum_order_quantity,
+            )
+            billable_weight = material_usage['billable_weight_per_unit_kg']
+            material_price = round(billable_weight * price_per_kg, 2)
             material_price_special_equipment = round(volume * density_special_equipment * price_per_kg_special_equipment, 2) 
 
             return {
                 'material_id': material_id,
                 'volume': volume,
-                'estimated_weight_kg': round(volume * density, 2), # kg
+                'raw_estimated_weight_kg': round(raw_weight, 2), # kg per unit before MOQ
+                'estimated_weight_kg': billable_weight, # kg per unit after order-level MOQ allocation
+                'billable_weight_kg': billable_weight,
+                'billable_order_weight_kg': material_usage['billable_order_weight_kg'],
+                'raw_order_weight_kg': material_usage['raw_order_weight_kg'],
+                'minimum_order_quantity_kg': material_usage['minimum_order_quantity_kg'],
+                'minimum_order_quantity_applied': material_usage['minimum_order_quantity_applied'],
                 'price_per_kg': price_per_kg,
                 'material_price': material_price,
                 'material_price_special_equipment': material_price_special_equipment
@@ -236,7 +259,13 @@ class MLCalculator(BaseCalculator):
             logger.warning(f"Error calculating material costs: {e}")
             return {
                 'material_id': 'unknown',
+                'raw_estimated_weight_kg': 0.0,
                 'estimated_weight_kg': 0.0,
+                'billable_weight_kg': 0.0,
+                'billable_order_weight_kg': 0.0,
+                'raw_order_weight_kg': 0.0,
+                'minimum_order_quantity_kg': None,
+                'minimum_order_quantity_applied': False,
                 'price_per_kg': 0.0,
                 'material_price': 0.0,
                 'material_price_special_equipment': 0.0

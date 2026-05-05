@@ -46,6 +46,40 @@ def calculate_mat_price(weight: float, price_per_kg: float) -> float:
     return round(price, 2)
 
 
+def calculate_billable_material_weight(
+    weight_per_unit_kg: float,
+    quantity: int,
+    minimum_order_quantity_kg: Any = None,
+) -> Dict[str, Any]:
+    """Return billable material weight with optional order-level MOQ.
+
+    MOQ is applied once to the whole order and then distributed per unit,
+    because the existing pricing flow calculates a per-unit price and later
+    multiplies it by quantity.
+    """
+    safe_quantity = max(int(quantity or 1), 1)
+    raw_weight_per_unit = max(float(weight_per_unit_kg or 0.0), 0.0)
+    raw_order_weight = raw_weight_per_unit * safe_quantity
+
+    try:
+        moq = float(minimum_order_quantity_kg)
+    except (TypeError, ValueError):
+        moq = 0.0
+
+    moq = moq if moq > 0 else None
+    billable_order_weight = max(raw_order_weight, moq) if moq is not None else raw_order_weight
+
+    return {
+        "quantity": safe_quantity,
+        "raw_weight_per_unit_kg": round(raw_weight_per_unit, 4),
+        "raw_order_weight_kg": round(raw_order_weight, 4),
+        "minimum_order_quantity_kg": moq,
+        "minimum_order_quantity_applied": bool(moq is not None and raw_order_weight < moq),
+        "billable_order_weight_kg": round(billable_order_weight, 4),
+        "billable_weight_per_unit_kg": round(billable_order_weight / safe_quantity, 4),
+    }
+
+
 def resolve_material(material_id: str, material_form: Union[str, MaterialForm], process: str) -> Dict[str, Any]:
     """Resolve material properties by id and form; validate form and process compatibility.
     Raises HTTPException 422 on invalid input."""
@@ -67,8 +101,18 @@ def resolve_material(material_id: str, material_form: Union[str, MaterialForm], 
     if process == "cnc-lathe" and form_key not in ["rod", "bar", "tube"]:
         raise HTTPException(status_code=422, detail="cnc-lathe requires material_form to be 'rod', 'bar', or 'tube'.")
     
-    price = mat["forms"][form_key]["price"]
-    return {"price": price, "density": mat["density"], "k_handle": mat["k_handle"], "family": mat["family"]}
+    form_data = mat["forms"][form_key]
+    price = form_data["price"]
+    return {
+        "price": price,
+        "density": mat["density"],
+        "k_handle": mat["k_handle"],
+        "family": mat["family"],
+        "minimum_order_quantity": form_data.get(
+            "minimum_order_quantity",
+            mat.get("minimum_order_quantity"),
+        ),
+    }
 
 
 def calculate_work_price(weight: float, k_handle: float, n_dimensions: int, location: str) -> float:
@@ -283,5 +327,9 @@ def get_material_info(material_id: str, material_form: str) -> Dict[str, Any]:
         'density': material_data.get('density', 0.0),
         'family': material_data.get('family', 'unknown'),
         'price': material_form_data.get('price', 0.0),
-        'one_layer_thickness': material_form_data.get('one_layer_thickness', 0.0)
+        'one_layer_thickness': material_form_data.get('one_layer_thickness', 0.0),
+        'minimum_order_quantity': material_form_data.get(
+            'minimum_order_quantity',
+            material_data.get('minimum_order_quantity')
+        )
     }

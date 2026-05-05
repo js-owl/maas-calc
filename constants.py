@@ -538,7 +538,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "hardness": 200,
         "strenghtness": 800,
         "thermal_conductivity": 45,
-        "relative_coef": 1.25
+        "relative_coef": 1.25,
+        "minimum_order_quantity": 10 # kg
     },
     "alum_АК7pch": {
         "label": "Алюминий АК7пч", 

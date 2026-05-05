@@ -77,6 +77,7 @@ class CNCLatheCalculator(BaseCalculator):
                 mat_volume=result.get("mat_volume"),
                 mat_weight=result.get("mat_weight"),
                 mat_price=result.get("mat_price"),
+                material_usage=result.get("material_usage"),
                 work_price=result.get("work_price"),
                 work_time=result.get("work_time"),
                 k_quantity=result.get("k_quantity"),

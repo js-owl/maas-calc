@@ -73,7 +73,14 @@ class PrintingCalculator(BaseCalculator):
             detail_price = result["detail_price"]
             total_price = detail_price * request.quantity
             price_bw["total_price (include quantity)"] = total_price
+            material_usage = result.get("material_usage", {}) or {}
             price_bw["price_per_kg"] = result.get('material_price_per_kg', 0.0) # add to front display
+            price_bw["minimum_order_quantity_kg"] = material_usage.get("minimum_order_quantity_kg")
+            price_bw["minimum_order_quantity_applied"] = material_usage.get("minimum_order_quantity_applied", False)
+            price_bw["raw_estimated_weight_kg"] = result.get("raw_mat_weight", 0.0)
+            price_bw["billable_weight_kg"] = result.get("mat_weight", 0.0)
+            price_bw["billable_order_weight_kg"] = material_usage.get("billable_order_weight_kg", 0.0)
+            price_bw["raw_order_weight_kg"] = material_usage.get("raw_order_weight_kg", 0.0)
             price_bw["dop_mat_price"] = result.get("work_price_breakdown", {}).get("base_work_price") * (k_cover - 1) # add to front display
             price_bw["mat_price_full"] = price_bw["mat_price"] + price_bw["dop_mat_price"] # add to front display
             price_bw["total_time"] = result.get("work_time") # add to front display
@@ -91,6 +98,7 @@ class PrintingCalculator(BaseCalculator):
                 mat_volume=result.get("mat_volume"),
                 mat_weight=result.get("mat_weight"),
                 mat_price=material_price,
+                material_usage=material_usage,
                 work_price=work_price_full,
                 work_time=result.get("work_time"),
                 k_quantity=result.get("k_quantity"),

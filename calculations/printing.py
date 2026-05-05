@@ -8,7 +8,7 @@ from .core import (
     resolve_material, calculate_mat_volume, calculate_mat_weight, 
     calculate_mat_price, calculate_work_price, calculate_work_time,
     calculate_k_quantity, calculate_k_complexity, calculate_cost, calculate_cycle,
-    check_machines, calculate_printing_work_time
+    check_machines, calculate_printing_work_time, calculate_billable_material_weight
 )
 from constants import CERT_COSTS, COVER, DEFAULTS, COST_STRUCTURE
 
@@ -62,7 +62,13 @@ def calculate_printing_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
     mat_volume = calculate_mat_volume(
         length+reserve, width+reserve, height+reserve
     ) # м3
-    mat_weight = calculate_mat_weight(mat_volume, material_props["density"])
+    raw_mat_weight = calculate_mat_weight(mat_volume, material_props["density"])
+    material_usage = calculate_billable_material_weight(
+        raw_mat_weight,
+        quantity,
+        material_props.get("minimum_order_quantity"),
+    )
+    mat_weight = material_usage["billable_weight_per_unit_kg"]
     mat_price = calculate_mat_price(mat_weight, material_props["price"])
 
     price_of_hour = COST_STRUCTURE.get(location)["price_of_hour"]
@@ -110,6 +116,8 @@ def calculate_printing_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
         "total_time": round(total_time, 3),
         "mat_volume": mat_volume,
         "mat_weight": mat_weight,
+        "raw_mat_weight": raw_mat_weight,
+        "material_usage": material_usage,
         "mat_price": mat_price,
         "work_price_full": work_price_full,
         "work_time": work_time,
