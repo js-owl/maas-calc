@@ -711,12 +711,244 @@ CERT_COSTS = {
     "7": {"label": "f", "value": 0.0}, 
 }
 
+# services with auto calculator
 AUTO_SERVICES = {
     "1": {"label": "3D-печать", "service": "printing"},
     "2": {"label": "Механическая обработка", "service": "cnc-milling"},
     "3": {"label": "Изготовление деталей из ПКМ", "service": "composite"},
 }
 
+# services with individual pages, save data and translate to bitrix only
+NON_AUTO_SERVICES = {
+    "1": {
+            "label": "Гальваника", 
+            "service": "electroplating",
+            "operations": [
+                {
+                    "id": "aluminum_weld_etching",
+                    "group": "Обработка алюминиевых сплавов",
+                    "path": ["Травление под сварку"],
+                    "max_part_size_mm": (5800, 700, 1500),
+                    "max_weight_kg": 600,
+                },
+                {
+                    "id": "aluminum_chemical_oxidation",
+                    "group": "Обработка алюминиевых сплавов",
+                    "path": ["Химическая оксидация"],
+                    "max_part_size_mm": (5800, 700, 1500),
+                    "max_weight_kg": 600,
+                },
+                {
+                    "id": "aluminum_anodizing_strong",
+                    "group": "Обработка алюминиевых сплавов",
+                    "path": ["Твёрдая анодная оксидация"],
+                    "max_part_size_mm": (5800, 850, 1400),
+                    "max_weight_kg": 600,
+                },
+                {
+                    "id": "aluminum_anodizing_water",
+                    "group": "Обработка алюминиевых сплавов",
+                    "path": ["Анодная оксидация", "Наполнение в воде"],
+                    "max_part_size_mm": (5800, 830, 1400),
+                    "max_weight_kg": 600,
+                },
+                {
+                    "id": "aluminum_anodizing_chrome",
+                    "group": "Обработка алюминиевых сплавов",
+                    "path": ["Анодная оксидация", "Наполнение в хромпике"],
+                    "max_part_size_mm": (5800, 830, 1500),
+                    "max_weight_kg": 600,
+                },
+                {
+                    "id": "aluminum_anodizing_organic_black",
+                    "group": "Обработка алюминиевых сплавов",
+                    "path": [
+                        "Анодная оксидация",
+                        "Наполнение в органических красителях (чёрный/красный)",
+                    ],
+                    "max_part_size_mm": (800, 500, 1300),
+                    "max_weight_kg": 600,
+                },
+                {
+                    "id": "corrosion_resistant_steel_degreasing",
+                    "group": "Химическая обработка коррозионностойких сталей",
+                    "path": ["Химическая пассивация", "Обезжиривание"],
+                    "max_part_size_mm": (2800, 1000, 1100),
+                    "max_weight_kg": 500,
+                },
+                {
+                    "id": "corrosion_resistant_steel_loosening",
+                    "group": "Химическая обработка коррозионностойких сталей",
+                    "path": ["Химическая пассивация", "Рыхление"],
+                    "max_part_size_mm": (2800, 850, 1100),
+                    "max_weight_kg": 500,
+                },
+                {
+                    "id": "corrosion_resistant_steel_etching",
+                    "group": "Химическая обработка коррозионностойких сталей",
+                    "path": ["Химическая пассивация", "Травление"],
+                    "max_part_size_mm": (2800, 1000, 1100),
+                    "max_weight_kg": 500,
+                },
+                {
+                    "id": "corrosion_resistant_steel_passivation",
+                    "group": "Химическая обработка коррозионностойких сталей",
+                    "path": ["Химическая пассивация", "Пассивация"],
+                    "max_part_size_mm": (2800, 850, 1100),
+                    "max_weight_kg": 500,
+                },
+                {
+                    "id": "titanium_degreasing",
+                    "group": "Химическая обработка титана",
+                    "path": ["Обезжиривание"],
+                    "max_part_size_mm": (2800, 800, 900),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "titanium_loosening",
+                    "group": "Химическая обработка титана",
+                    "path": ["Рыхление"],
+                    "max_part_size_mm": (2800, 800, 900),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "titanium_etching",
+                    "group": "Химическая обработка титана",
+                    "path": ["Травление"],
+                    "max_part_size_mm": (2800, 800, 900),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "titanium_passivation",
+                    "group": "Химическая обработка титана",
+                    "path": ["Облагораживание"],
+                    "max_part_size_mm": (2800, 800, 900),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "titanium_passivation",
+                    "group": "Химическая обработка магния",
+                    "path": ["Хроматирование"],
+                    "max_part_size_mm": (1700, 600, 950),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "steel_phosphating_zinc",
+                    "group": "Фосфатирование сталей",
+                    "path": ["Фосфатирование в цинкфосфатной ванне"],
+                    "max_part_size_mm": (1800, 670, 900),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "steel_phosphating_oxide",
+                    "group": "Фосфатирование сталей",
+                    "path": ["Оксидное фосфатирование"],
+                    "max_part_size_mm": (1800, 670, 800),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "galvanization_zinc_phosphating",
+                    "group": "Цинкование",
+                    "path": ["С фосфатированием"],
+                    "max_part_size_mm": (2800, 700, 1000),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "galvanization_zinc_chromating",
+                    "group": "Цинкование",
+                    "path": ["С хроматированием"],
+                    "max_part_size_mm": (2800, 700, 1000),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "cadmium_plating_chlorine_phosphating",
+                    "group": "Кадмирование",
+                    "path": ["Хлористоаммонийное", "С фосфатированием"],
+                    "max_part_size_mm": (2800, 700, 1000),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "cadmium_plating_chlorine_chromating",
+                    "group": "Кадмирование",
+                    "path": ["Хлористоаммонийное", "С хроматированием"],
+                    "max_part_size_mm": (2800, 700, 1000),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "cadmium_plating_sulfuric_phosphating",
+                    "group": "Кадмирование",
+                    "path": ["Сернокислое", "С фосфатированием"],
+                    "max_part_size_mm": (1000, 190, 600),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "cadmium_plating_sulfuric_chromating",
+                    "group": "Кадмирование",
+                    "path": ["Сернокислое", "С хроматированием"],
+                    "max_part_size_mm": (1000, 190, 600),
+                    "max_weight_kg": 10,
+                },
+                {
+                    "id": "nickel_plating_sulfuric_phosphating",
+                    "group": "Никелирование",
+                    "path": ["Хлористое"],
+                    "max_part_size_mm": (1000, 190, 600),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "nickel_plating_sulfuric_chromating",
+                    "group": "Никелирование",
+                    "path": ["Сернокислое"],
+                    "max_part_size_mm": (1000, 190, 600),
+                    "max_weight_kg": 400,
+                },
+                {
+                    "id": "nickel_cadmium",
+                    "group": "Покрытие гальванотермический никель-кадмий",
+                    "path": [],
+                    "max_part_size_mm": (1000, 190, 600),
+                    "max_weight_kg": 10,
+                },
+                {
+                    "id": "tin_bismuth",
+                    "group": "Олово-висмут",
+                    "path": [],
+                    "max_part_size_mm": (1000, 190, 600),
+                    "max_weight_kg": 10,
+                },
+                {
+                    "id": "copper_plating",
+                    "group": "Меднение",
+                    "path": [],
+                    "max_part_size_mm": (1000, 190, 600),
+                    "max_weight_kg": 10,
+                },
+                {
+                    "id": "electropolishing",
+                    "group": "Электрополирование",
+                    "path": [],
+                    "max_part_size_mm": (1000, 190, 600),
+                    "max_weight_kg": 10,
+                },
+                {
+                    "id": "chrome_plating",
+                    "group": "Хромирование",
+                    "path": [],
+                    "max_part_size_mm": (1600, 400, 800),
+                    "max_weight_kg": 10,
+                },
+                {
+                    "id": "silvering",
+                    "group": "Серебрение",
+                    "path": [],
+                    "max_part_size_mm": (150, 150, 30),
+                    "max_weight_kg": 10,
+                },
+            ]
+        }
+}
+
+# services for other_services page
 OTHER_SERVICES = {
     "1": {"label": "Листогибочные работы", "service": "bending"},
     "2": {"label": "Слесарные работы", "service": "handing"},
@@ -729,8 +961,7 @@ OTHER_SERVICES = {
     "9": {"label": "Другое", "service": "other"},
     "10": {"label": "Изготовление деталей из ПКМ", "service": "composite"},
     "11": {"label": "Испытательные ресурсы", "service": "testing"},
-    "12": {"label": "Гальваника", "service": "electroplating"},
-    "13": {"label": "Производство из резины", "service": "rubber"}
+    "12": {"label": "Производство из резины", "service": "rubber"}
 }
 
 # Default values for calculations

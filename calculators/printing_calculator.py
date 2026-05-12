@@ -10,6 +10,7 @@ from .base_calculator import BaseCalculator
 from models.calculation_models import PrintingCalculationRequest
 from models.response_models import UnifiedCalculationResponse
 from calculations.core import calculate_cost
+from constants import COST_STRUCTURE
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,15 @@ class PrintingCalculator(BaseCalculator):
             price_bw["total_time"] = result.get("work_time") # add to front display
             price_bw["price_special_equipment_to_quantity"] = 0 # add to front display
             
+            # calculation of one detail for front
+            price_special_equipment = 0 # TODO
+            detail_price_calculation = self._calculate_detail_calculation(
+                location,
+                detail_price,
+                material_price,
+                price_special_equipment
+            )
+
             # Build response
             response_data = self._create_base_response(
                 file_id=request.file_id,
@@ -109,6 +119,7 @@ class PrintingCalculator(BaseCalculator):
                 extracted_dimensions=request.dimensions,
                 work_price_breakdown=result.get("work_price_breakdown"),
                 total_price_breakdown=price_bw,
+                detail_price_calculation=detail_price_calculation
             )
             
             self._log_calculation_complete(request.file_id, "3D printing")
@@ -120,3 +131,34 @@ class PrintingCalculator(BaseCalculator):
         except Exception as e:
             logger.error(f"Error in printing calculation for file_id {request.file_id}: {e}")
             raise HTTPException(status_code=500, detail=str(e))
+
+    def _calculate_detail_calculation(
+            self, 
+            location: str, 
+            detail_price_one: float, 
+            material_price: float,
+            price_special_equipment: float
+        ) -> Dict[str, Any]:
+        "Calculation of one detail for front"
+
+        profit_material = COST_STRUCTURE.get(location, {}).get('profit_material', 0)
+        other_profit = COST_STRUCTURE.get(location, {}).get('other_profit', 0)
+        salary_fund_with_taxes = round(float(
+            float(detail_price_one) - material_price * float(1 + profit_material) - price_special_equipment * float(1 + other_profit)
+            ) / float(1 + other_profit), 2)
+        
+        material_price_to_calc = round(material_price * float(1 + profit_material), 2)
+        salary_fund_with_taxes_to_calc = round(salary_fund_with_taxes * float(1 + other_profit), 2)
+        price_special_equipment_to_calc = round(price_special_equipment * float(1 + other_profit), 2)
+
+        taxes = round(float(detail_price_one) * 0.22, 2)
+        detail_price_calculation = {
+            'material_price': material_price_to_calc,
+            'salary_fund_with_taxes': salary_fund_with_taxes_to_calc,
+            'price_special_equipment': price_special_equipment_to_calc,
+            'detail_price_one': detail_price_one,
+            'taxes': taxes,
+            'detail_price_one_with_taxes': detail_price_one + taxes
+        }
+
+        return detail_price_calculation

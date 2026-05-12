@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 from fastapi import HTTPException
 from constants import (
     ERROR_MESSAGES, ERROR_CODES, MATERIALS, TOLERANCE, FINISH, COVER,
-    AUTO_SERVICES, OTHER_SERVICES
+    AUTO_SERVICES, NON_AUTO_SERVICES, OTHER_SERVICES
 )
 from utils.logging_utils import get_logger
 from utils.response_utils import ResponseWrapper
@@ -17,6 +17,7 @@ VALID_SERVICES_LIST = []
 AUTO_SERVICES_LIST = [v["service"] for v in AUTO_SERVICES.values()]
 VALID_SERVICES_LIST.extend(AUTO_SERVICES_LIST)
 VALID_SERVICES_LIST.extend([v["service"] for v in OTHER_SERVICES.values()])
+VALID_SERVICES_LIST.extend([v["service"] for v in NON_AUTO_SERVICES.values()])
 
 class ValidationError(Exception):
     """Custom validation error with standardized message"""
@@ -92,7 +93,7 @@ class Validator:
                     value=None
                 )
             
-            if not isinstance(dimensions[field], (int, float)) or dimensions[field] <= 0:
+            if not isinstance(dimensions[field], (int, float)) or dimensions[field] <= -0.1:
                 raise ValidationError(
                     field=field,
                     message=ERROR_MESSAGES["invalid_dimensions"],
@@ -211,23 +212,6 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
             )
         except ValidationError as e:
             errors.append(e)
-        
-        # Validate material form if provided
-        # if "material_form" in request_data:
-        #     try:
-        #         Validator.validate_material_form(
-        #             request_data["material_id"],
-        #             request_data["material_form"]
-        #         )
-        #     except ValidationError as e:
-        #         errors.append(e)
-    
-    # Validate dimensions if provided
-    # if "dimensions" in request_data:
-    #     try:
-    #         Validator.validate_dimensions(request_data["dimensions"])
-    #     except ValidationError as e:
-    #         errors.append(e)
     
     # Validate quantity if provided
     if "quantity" in request_data:

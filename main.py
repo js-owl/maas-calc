@@ -25,7 +25,7 @@ from utils.versioning import VersioningMiddleware, get_version_info
 from utils.validation_utils import validate_calculation_request, create_validation_error_response
 from constants import (
     MATERIALS, LOCATIONS, COVER, TOLERANCE, 
-    FINISH, CONTROL_TYPES, CERT_COSTS, AUTO_SERVICES,
+    FINISH, CONTROL_TYPES, CERT_COSTS, AUTO_SERVICES, NON_AUTO_SERVICES,
     OTHER_SERVICES, APP_VERSION
 )
 
@@ -105,16 +105,6 @@ async def calculate_price(request: UnifiedCalculationRequest):
     from utils.logging_utils import log_calculation_start, log_calculation_complete, log_error
     import time
     
-    # Validate request before processing
-    request_data = request.model_dump(exclude_unset=True, exclude_none=True)
-    validation_errors = validate_calculation_request(request_data)
-    
-    if validation_errors:
-        return create_validation_error_response(
-            validation_errors,
-            request_id=getattr(request, 'request_id', None)
-        )
-    
     start_time = time.time()
     log_calculation_start(
         logger=logger,
@@ -124,7 +114,7 @@ async def calculate_price(request: UnifiedCalculationRequest):
     )
 
     AUTO_SERVICES_LIST = [v["service"] for v in AUTO_SERVICES.values()]
-
+    
     if (request.service_id=="cnc-milling" and request.file_data is None) or\
         (request.service_id not in AUTO_SERVICES_LIST):
         logger.info("Default request!")
@@ -143,6 +133,17 @@ async def calculate_price(request: UnifiedCalculationRequest):
             message=f"Calculation completed successfully for {request.service_id}",
             request_id=getattr(request, 'request_id', None)
         )
+
+    # Validate request before processing
+    request_data = request.model_dump(exclude_unset=True, exclude_none=True)
+    validation_errors = validate_calculation_request(request_data)
+    
+    if validation_errors:
+        return create_validation_error_response(
+            validation_errors,
+            request_id=getattr(request, 'request_id', None)
+        )
+
     # logging request to dev
     # filtered_request = {k: v for k, v in request_data.items() if k != "file_data"}
     # logger.info(f"============================= Request: поля: {list(request_data.keys())}, Request data without file_data {filtered_request}")
@@ -323,7 +324,9 @@ async def list_materials(process: Optional[str] = None):
 async def list_services():
     """List all available manufacturing services"""
     data = {
-        "services": [v['service'] for k, v in AUTO_SERVICES.items()] + [v['service'] for k, v in OTHER_SERVICES.items()]
+        "services": [v['service'] for k, v in AUTO_SERVICES.items()] + \
+            [v['service'] for k, v in OTHER_SERVICES.items()] + \
+            [v['service'] for k, v in NON_AUTO_SERVICES.items()]
     }
     return ResponseWrapper.success_response(data, "Services retrieved successfully")
 
@@ -344,6 +347,7 @@ async def list_services():
 async def list_locations():
     """
     List available other manufacturing services 
+    for other_services page
     without auto price calculations.
     """
     data = {
@@ -354,7 +358,10 @@ async def list_locations():
 
 @app.get("/all_services", tags=["Configuration"])
 async def list_all_services():
-    """Return all available services from AUTO_SERVICES and OTHER_SERVICES"""
+    """
+    Return all available services 
+    from AUTO_SERVICES, NON_AUTO_SERVICES and OTHER_SERVICES
+    """
     services = []
 
     # Add auto services
@@ -362,6 +369,9 @@ async def list_all_services():
 
     # Add other services
     services.extend([{"id": v["service"], "label": v["label"]} for v in OTHER_SERVICES.values()])
+
+    # Add non_auto services
+    services.extend([{"id": v["service"], "label": v["label"]} for v in NON_AUTO_SERVICES.values()])
 
     data = {
         "all_services": services
@@ -390,6 +400,32 @@ async def list_locations():
     }
     return ResponseWrapper.success_response(data, "Locations retrieved successfully")
 
+
+@app.get("/operations_available", tags=["Configuration"])
+async def list_operations_available(service_id: str):
+    """List available operations for different services to view on pages"""
+    for i in NON_AUTO_SERVICES.keys():
+        if NON_AUTO_SERVICES[i].get("service")==service_id:
+            operations = NON_AUTO_SERVICES[i].get("operations")
+            data = {
+                "values": [
+                    {
+                        "id": op["id"],
+                        "group": op["group"],
+                        "path": op["path"],
+                        "label": " / ".join([op["group"], *op["path"]]),
+                        "max_part_size_mm": {
+                            "length": op["max_part_size_mm"][0],
+                            "width": op["max_part_size_mm"][1],
+                            "height": op["max_part_size_mm"][2],
+                        },
+                        "max_part_size_label": "×".join(map(str, op["max_part_size_mm"])),
+                        "max_weight_kg": op["max_weight_kg"],
+                    }
+                    for op in operations
+                ]
+            }
+    return ResponseWrapper.success_response(data, "Operations retrieved successfully")
 
 if __name__ == "__main__":
     import uvicorn

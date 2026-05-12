@@ -129,14 +129,15 @@ class MLCalculator(BaseCalculator):
                 location,
                 breakdown=True
             )
-            detail_price = part_price + price_special_equipment / quantity
+            price_special_equipment_to_quantity = price_special_equipment / quantity
+            detail_price = part_price + price_special_equipment_to_quantity
             price_bw["detail_price (include special_equipment)"] = detail_price
             part_price_one = calculate_cost(
                 material_price,
                 work_price_full_one,
                 location
             )
-            detail_price_one = part_price_one + price_special_equipment
+            detail_price_one = part_price_one + price_special_equipment_to_quantity
             total_price = detail_price * quantity
             price_bw["total_price (include quantity)"] = total_price
             
@@ -150,11 +151,19 @@ class MLCalculator(BaseCalculator):
             price_bw["dop_mat_price"] = work_price * (k_cover - 1) # add to front display
             price_bw["mat_price_full"] = price_bw["mat_price"] + price_bw["dop_mat_price"] # add to front display
             price_bw["total_time"] = predicted_hours # add to front display
-            price_bw["price_special_equipment_to_quantity"] = price_special_equipment / quantity # add to front display
+            price_bw["price_special_equipment_to_quantity"] = price_special_equipment_to_quantity # add to front display
 
             # Calculate manufacturing cycle
             manufacturing_cycle = calculate_cycle(cover_id, quantity, k_otk)
             
+            # Calculation of one detail for front
+            detail_price_calculation = self._calculate_detail_calculation(
+                location,
+                detail_price_one,
+                material_price,
+                price_special_equipment_to_quantity
+            )
+
             # Create response
             response_data = self._create_base_response(
                 file_id=request.file_id,
@@ -190,7 +199,8 @@ class MLCalculator(BaseCalculator):
                     'k_finish': k_finish,
                     'final_work_price': work_price_full
                 },
-                total_price_breakdown=price_bw
+                total_price_breakdown=price_bw,
+                detail_price_calculation=detail_price_calculation
             )
             
             self._log_calculation_complete(request.file_id, "ML prediction")
@@ -321,6 +331,37 @@ class MLCalculator(BaseCalculator):
                 'material_price': 0.0,
                 'estimated_weight_kg': None,
             }
+
+    def _calculate_detail_calculation(
+            self, 
+            location: str, 
+            detail_price_one: float, 
+            material_price: float,
+            price_special_equipment: float
+        ) -> Dict[str, Any]:
+        "Calculation of one detail for front"
+
+        profit_material = COST_STRUCTURE.get(location, {}).get('profit_material', 0)
+        other_profit = COST_STRUCTURE.get(location, {}).get('other_profit', 0)
+        salary_fund_with_taxes = round(float(
+            float(detail_price_one) - material_price * float(1 + profit_material) - price_special_equipment * float(1 + other_profit)
+            ) / float(1 + other_profit), 2)
+        
+        material_price_to_calc = round(material_price * float(1 + profit_material), 2)
+        salary_fund_with_taxes_to_calc = round(salary_fund_with_taxes * float(1 + other_profit), 2)
+        price_special_equipment_to_calc = round(price_special_equipment * float(1 + other_profit), 2)
+
+        taxes = round(float(detail_price_one) * 0.22, 2)
+        detail_price_calculation = {
+            'material_price': material_price_to_calc,
+            'salary_fund_with_taxes': salary_fund_with_taxes_to_calc,
+            'price_special_equipment': price_special_equipment_to_calc,
+            'detail_price_one': detail_price_one,
+            'taxes': taxes,
+            'detail_price_one_with_taxes': detail_price_one + taxes
+        }
+
+        return detail_price_calculation
 
     def _get_key_features(self, ml_features: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -456,6 +497,14 @@ class MLCompositeCalculator(MLCalculator):
 
             manufacturing_cycle = calculate_cycle(cover_id, quantity, k_otk)
 
+            # calculation of one detail for front
+            price_special_equipment = 0 # TODO
+            detail_price_calculation = self._calculate_detail_calculation(
+                location,
+                detail_price_one,
+                material_price,
+                price_special_equipment
+            )
             response_data = self._create_base_response(
                 file_id=request.file_id,
                 filename=getattr(request, "filename", None),
@@ -488,6 +537,7 @@ class MLCompositeCalculator(MLCalculator):
                     'final_work_price': work_price_full,
                 },
                 total_price_breakdown=price_bw,
+                detail_price_calculation=detail_price_calculation
             )
             self._log_calculation_complete(request.file_id, "Composite ML prediction")
             return UnifiedCalculationResponse(**response_data)

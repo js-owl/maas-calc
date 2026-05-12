@@ -67,3 +67,4 @@ class UnifiedCalculationResponse(BaseModel):
     material_costs: Optional[Dict[str, Any]] = Field(None, description="Material cost breakdown")
     work_price_breakdown: Optional[Dict[str, Any]] = Field(None, description="Work price calculation breakdown")
     total_price_breakdown: Optional[Dict[str, Any]] = Field(None, description="Total price calculation breakdown")
+    detail_price_calculation: Optional[Dict[str, Any]] = Field(None, description="Price calculation breakdown of one detail for front aka 'calculation'")
