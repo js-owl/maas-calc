@@ -13,7 +13,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.svm import SVR
 
-from flexible_ensemble.gnn_backend import (
+from ml_models.flexible_ensemble.gnn_backend import (
     GraphStore,
     attach_targets_to_graphs,
     fit_gnn_full_model,

@@ -209,10 +209,37 @@ class FlexibleRegressorEnsemble(
             raw_path.mkdir(parents=True, exist_ok=True)
             return raw_path / "bundle.joblib", raw_path / "manifest.json"
 
+    @staticmethod
+    def _ensure_legacy_pickle_import_aliases() -> None:
+            """Register old import names used inside previously saved joblib bundles.
+
+            Some bundles were saved when ``flexible_ensemble`` was a top-level
+            package.  In this backend it lives under ``ml_models``.  Pickle/joblib
+            imports classes by their original module path, so loading such bundles
+            requires the legacy module names to be importable.
+            """
+            import sys
+            import importlib
+
+            ml_models_dir = Path(__file__).resolve().parents[1]
+            ml_models_dir_str = str(ml_models_dir)
+            if ml_models_dir_str not in sys.path:
+                sys.path.insert(0, ml_models_dir_str)
+
+            aliases = {
+                "flexible_ensemble": "ml_models.flexible_ensemble",
+                "flexible_ensemble.config": "ml_models.flexible_ensemble.config",
+                "flexible_ensemble.trainer": "ml_models.flexible_ensemble.trainer",
+            }
+            for legacy_name, current_name in aliases.items():
+                if legacy_name not in sys.modules:
+                    sys.modules[legacy_name] = importlib.import_module(current_name)
+
     @classmethod
     def load_bundle(cls, path: str | Path) -> Dict[str, Any]:
             raw_path = Path(path)
             bundle_path = raw_path if raw_path.is_file() else raw_path / "bundle.joblib"
+            cls._ensure_legacy_pickle_import_aliases()
             payload = joblib.load(bundle_path)
             if isinstance(payload, cls):
                 trainer = payload

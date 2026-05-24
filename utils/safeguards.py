@@ -65,7 +65,6 @@ class SafeguardManager:
                 "k_otk": DEFAULTS["k_otk"]
             },
             "composite": {
-                "dimensions": Dimensions(length=100.0, width=50.0, height=10.0),
                 "quantity": 1,
                 "material_id": "carbon_22502",
                 "material_form": MaterialForm.TEXTILE,

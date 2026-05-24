@@ -64,7 +64,7 @@ class PrintingCalculator(BaseCalculator):
             # get total_price_breakdown
             material_price = result.get("mat_price")
             work_price_full = result.get("work_price_full")
-            location = getattr(request, 'location', 'location_3')
+            location = "location_3" # only this place has printers
             _, price_bw = calculate_cost(
                 material_price,
                 work_price_full,

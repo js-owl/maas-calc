@@ -91,7 +91,7 @@ class OptunaMixin:
             optuna_test_target: Optional[np.ndarray],
         ) -> Dict[str, Any]:
             try:
-                import optuna
+                import ml_models.flexible_ensemble.mixins.optuna as optuna
             except ImportError as e:
                 raise ImportError("optuna не установлен, а use_optuna=True") from e
 

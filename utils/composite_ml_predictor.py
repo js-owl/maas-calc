@@ -70,7 +70,7 @@ class CompositeMLPredictor:
             return False
 
         try:
-            from flexible_ensemble.trainer import FlexibleRegressorEnsemble
+            from ml_models.flexible_ensemble.trainer import FlexibleRegressorEnsemble
 
             payload = FlexibleRegressorEnsemble.load_bundle(bundle_path)
             trainer = payload.get("trainer")

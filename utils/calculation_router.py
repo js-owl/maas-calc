@@ -44,7 +44,15 @@ class CalculationRouter:
         calculator_key = f"{service_id}_{'ml' if use_ml else 'rule'}"
         
         if calculator_key not in self.calculators:
-            if use_ml and ENABLE_ML_MODELS and ml_predictor.is_model_available():
+            use_ml_calculator = use_ml and (
+                (service_id == "composite" and composite_ml_predictor.is_model_available())
+                or (
+                    service_id != "composite"
+                    and ENABLE_ML_MODELS
+                    and ml_predictor.is_model_available()
+                )
+            )
+            if use_ml_calculator:
                 # Use ML calculators
                 if service_id == "printing":
                     self.calculators[calculator_key] = MLPrintingCalculator()
@@ -177,6 +185,7 @@ class CalculationRouter:
             elif service_id == "painting":
                 return type('MLPaintingRequest', (), base_params)()
             elif service_id == "composite":
+                base_params['is_need_special_equipment'] = parameters.get('is_need_special_equipment', 0)
                 return type('MLCompositeRequest', (), base_params)()
         
         if service_id == "printing":

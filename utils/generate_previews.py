@@ -83,8 +83,10 @@ def render_mesh_to_png_bytes(mesh, size: int, angles) -> bytes:
     try:
         png = scene.save_image(resolution=(size, size), visible=False)
         if png is None:
-            raise RuntimeError("trimesh scene.save_image() returned None")
+            logger.warning("Trimesh scene.save_image() returned NONE")
+            raise RuntimeError()
     except Exception as e:
+        logger.warning("WARNIG: %s", e)
         return png_placeholder(size)
     logger.info("png is saved")
     return png

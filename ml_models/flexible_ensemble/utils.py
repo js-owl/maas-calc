@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from flexible_ensemble.trainer import FlexibleRegressorEnsemble
+from ml_models.flexible_ensemble.trainer import FlexibleRegressorEnsemble
 
 def _parse_csv_list(value: Optional[str]) -> List[str]:
     if value is None:

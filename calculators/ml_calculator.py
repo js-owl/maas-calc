@@ -7,8 +7,9 @@ based on geometric features extracted from CAD files.
 
 import logging
 import math
+import re
 import numpy as np
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from datetime import datetime
 
 from .base_calculator import BaseCalculator
@@ -26,12 +27,22 @@ from constants import (
     FINISH, COVER, SPECIAL_EQUIPMENT_COEF, 
     SPECIAL_EQUIPMENT_MATERIAL, SPECIAL_EQUIPMENT_FORM
 )
+
+try:
+    from constants import DOP_MATERIALS
+except ImportError:  # Backward compatibility with older constants.py
+    DOP_MATERIALS = {}
 from calculations.core import (
     calculate_k_quantity, calculate_cost, calculate_cover_coefficient,
     calculate_cycle, check_machines, get_material_info, calculate_billable_material_weight
 )
 
 logger = logging.getLogger(__name__)
+
+
+COMPOSITE_SPECIAL_EQUIPMENT_MATERIAL = "mdf"
+COMPOSITE_SPECIAL_EQUIPMENT_FORM = "plate"
+COMPOSITE_SPECIAL_EQUIPMENT_MARGIN = 1.2
 
 
 class MLCalculator(BaseCalculator):
@@ -332,6 +343,229 @@ class MLCalculator(BaseCalculator):
                 'estimated_weight_kg': None,
             }
 
+    def _calculate_composite_special_equipment_material_costs(self, request: Any) -> Dict[str, Any]:
+        """Calculate MDF technological tooling material cost for composite parts.
+
+        The default assumption is a layered tooling blank made from MDF plates.
+        The blank dimensions are the part OBB dimensions with a 20% reserve.
+        DOP_MATERIALS["mdf"]["forms"]["plate"] is expected to provide:
+        - price: price of one full plate;
+        - sizes: three plate dimensions in mm, separated by "x".
+        """
+        default_response = {
+            "special_equipment_material_id": COMPOSITE_SPECIAL_EQUIPMENT_MATERIAL,
+            "special_equipment_material_form": COMPOSITE_SPECIAL_EQUIPMENT_FORM,
+            "special_equipment_plate_price": 0.0,
+            "special_equipment_plate_sizes_mm": None,
+            "special_equipment_blank_dimensions_mm": None,
+            "special_equipment_layer_count": 0,
+            "special_equipment_pieces_per_plate": 0,
+            "special_equipment_required_volume_mm3": 0.0,
+            "special_equipment_plate_volume_mm3": 0.0,
+            "special_equipment_plate_volume_fraction": 0.0,
+            "special_equipment_pricing_mode": None,
+            "special_equipment_plates_needed": 0.0,
+            "material_price_special_equipment": 0.0,
+        }
+
+        try:
+            form_data = (
+                DOP_MATERIALS
+                .get(COMPOSITE_SPECIAL_EQUIPMENT_MATERIAL, {})
+                .get("forms", {})
+                .get(COMPOSITE_SPECIAL_EQUIPMENT_FORM, {})
+            )
+            if not form_data:
+                raise ValueError(
+                    "DOP_MATERIALS['mdf']['forms']['plate'] is not configured"
+                )
+
+            plate_price = float(form_data.get("price", 0.0) or 0.0)
+            if plate_price <= 0:
+                raise ValueError("MDF plate price must be greater than zero")
+
+            plate_x, plate_y, plate_z = self._parse_plate_sizes_mm(form_data.get("sizes"))
+            part_x, part_y, part_z = self._get_request_obb_dimensions_mm(request)
+
+            blank_x = part_x * COMPOSITE_SPECIAL_EQUIPMENT_MARGIN
+            blank_y = part_y * COMPOSITE_SPECIAL_EQUIPMENT_MARGIN
+            blank_z = part_z * COMPOSITE_SPECIAL_EQUIPMENT_MARGIN
+
+            # Treat MDF as a sheet material: two largest dimensions are the sheet plane,
+            # the smallest dimension is the layer thickness.
+            plate_plane_x, plate_plane_y, plate_thickness = sorted(
+                [plate_x, plate_y, plate_z],
+                reverse=True,
+            )
+            blank_plane_x, blank_plane_y, blank_height = sorted(
+                [blank_x, blank_y, blank_z],
+                reverse=True,
+            )
+
+            # Number of MDF layers needed to build the tooling blank height.
+            # Example: for a 24 mm tooling blank and a 10 mm MDF plate we need
+            # three physical layers in the sandwich.
+            layer_count = max(1, int(math.ceil(blank_height / plate_thickness)))
+
+            # Required material volume is calculated from the real tooling blank,
+            # not from a rounded full-plate purchase quantity. This is important
+            # for small composite parts: if the tooling blank consumes less than
+            # one MDF plate, the material cost must be proportional to the used
+            # plate volume instead of being clamped to the full plate price.
+            required_volume_mm3 = blank_plane_x * blank_plane_y * blank_height
+            plate_volume_mm3 = plate_plane_x * plate_plane_y * plate_thickness
+            plate_volume_fraction = required_volume_mm3 / plate_volume_mm3
+
+            pieces_per_plate = self._calculate_rectangular_pieces_per_plate(
+                plate_plane_x,
+                plate_plane_y,
+                blank_plane_x,
+                blank_plane_y,
+            )
+
+            # Convert plate price to a volume price and charge only the consumed
+            # MDF volume when the tooling fits inside a single plate. In other
+            # words: material_price = plate_price / plate_volume * required_volume.
+            # The pieces_per_plate check prevents underpricing flat blanks whose
+            # volume is below one plate, but whose footprint is larger than a plate.
+            if plate_volume_fraction <= 1.0 and pieces_per_plate > 0:
+                plates_needed = plate_volume_fraction
+                pricing_mode = "volume_fraction"
+                material_price_special_equipment = round(plate_price * plate_volume_fraction, 2)
+            else:
+                # For blanks larger than one plate, keep the previous conservative
+                # full-plate nesting/tiling estimate: once the tooling exceeds one
+                # plate by volume or footprint, fractional accounting can
+                # underestimate waste.
+                if pieces_per_plate > 0:
+                    plates_needed = int(math.ceil(layer_count / pieces_per_plate))
+                else:
+                    # The tooling layer is larger than a plate. Use a simple tiling
+                    # estimate and multiply it by the number of MDF layers.
+                    plates_per_layer = self._calculate_plates_per_large_layer(
+                        plate_plane_x,
+                        plate_plane_y,
+                        blank_plane_x,
+                        blank_plane_y,
+                    )
+                    plates_needed = plates_per_layer * layer_count
+
+                pricing_mode = "full_plate_tiling"
+                material_price_special_equipment = round(plates_needed * plate_price, 2)
+
+            return {
+                **default_response,
+                "special_equipment_plate_price": plate_price,
+                "special_equipment_plate_sizes_mm": {
+                    "x": plate_x,
+                    "y": plate_y,
+                    "z": plate_z,
+                },
+                "special_equipment_blank_dimensions_mm": {
+                    "x": round(blank_x, 4),
+                    "y": round(blank_y, 4),
+                    "z": round(blank_z, 4),
+                },
+                "special_equipment_layer_count": layer_count,
+                "special_equipment_pieces_per_plate": pieces_per_plate,
+                "special_equipment_required_volume_mm3": round(required_volume_mm3, 4),
+                "special_equipment_plate_volume_mm3": round(plate_volume_mm3, 4),
+                "special_equipment_plate_volume_fraction": round(plate_volume_fraction, 8),
+                "special_equipment_pricing_mode": pricing_mode,
+                "special_equipment_plates_needed": round(plates_needed, 8),
+                "material_price_special_equipment": material_price_special_equipment,
+            }
+        except Exception as e:
+            logger.warning(f"Error calculating composite special equipment material costs: {e}")
+            return {**default_response, "special_equipment_error": str(e)}
+
+    def _parse_plate_sizes_mm(self, sizes: Any) -> Tuple[float, float, float]:
+        """Parse plate sizes from strings like '1500x3000x16' or '1500х3000х16'."""
+        if not sizes:
+            raise ValueError("MDF plate sizes are empty")
+
+        parts = [
+            part.strip().replace(",", ".")
+            for part in re.split(r"[xх×*]", str(sizes).lower())
+            if part.strip()
+        ]
+        if len(parts) != 3:
+            raise ValueError(f"MDF plate sizes must contain exactly 3 dimensions: {sizes!r}")
+
+        values = tuple(float(part) for part in parts)
+        if any(value <= 0 for value in values):
+            raise ValueError(f"MDF plate sizes must be positive: {sizes!r}")
+        return values
+
+    def _get_request_obb_dimensions_mm(self, request: Any) -> Tuple[float, float, float]:
+        """Get OBB dimensions from request attributes, ML features or dimensions fallback."""
+        ml_features = getattr(request, "ml_features", {}) or {}
+
+        def _get_dim(name: str) -> Optional[float]:
+            value = getattr(request, name, None)
+            if value is None:
+                value = ml_features.get(name)
+            if value is None:
+                return None
+            try:
+                value = float(value)
+            except (TypeError, ValueError):
+                return None
+            return value if value > 0 else None
+
+        obb_x = _get_dim("obb_x")
+        obb_y = _get_dim("obb_y")
+        obb_z = _get_dim("obb_z")
+        if obb_x and obb_y and obb_z:
+            return obb_x, obb_y, obb_z
+
+        dimensions = getattr(request, "dimensions", None) or ml_features.get("dimensions")
+        if isinstance(dimensions, dict):
+            values = (
+                dimensions.get("length"),
+                dimensions.get("width"),
+                dimensions.get("height"),
+            )
+        else:
+            values = (
+                getattr(dimensions, "length", None),
+                getattr(dimensions, "width", None),
+                getattr(dimensions, "height", None),
+            )
+
+        try:
+            parsed = tuple(float(value) for value in values)
+        except (TypeError, ValueError):
+            raise ValueError("Cannot determine part OBB dimensions for composite special equipment")
+
+        if len(parsed) != 3 or any(value <= 0 for value in parsed):
+            raise ValueError("Part OBB dimensions must be positive")
+        return parsed
+
+    def _calculate_rectangular_pieces_per_plate(
+        self,
+        plate_x: float,
+        plate_y: float,
+        blank_x: float,
+        blank_y: float,
+    ) -> int:
+        """Estimate how many rectangular blank layers fit into one plate."""
+        count_normal = math.floor(plate_x / blank_x) * math.floor(plate_y / blank_y)
+        count_rotated = math.floor(plate_x / blank_y) * math.floor(plate_y / blank_x)
+        return max(int(count_normal), int(count_rotated), 0)
+
+    def _calculate_plates_per_large_layer(
+        self,
+        plate_x: float,
+        plate_y: float,
+        blank_x: float,
+        blank_y: float,
+    ) -> int:
+        """Estimate how many full plates are needed when one layer exceeds plate size."""
+        count_normal = math.ceil(blank_x / plate_x) * math.ceil(blank_y / plate_y)
+        count_rotated = math.ceil(blank_x / plate_y) * math.ceil(blank_y / plate_x)
+        return max(1, int(min(count_normal, count_rotated)))
+
     def _calculate_detail_calculation(
             self, 
             location: str, 
@@ -472,38 +706,90 @@ class MLCompositeCalculator(MLCalculator):
             material_costs = self._calculate_composite_material_costs(request)
             material_price = float(material_costs.get('material_price', 0.0) or 0.0)
 
+            # For composite parts the need for tooling is not predicted by a classifier.
+            # The frontend sends this flag explicitly. Any value except 1 is treated as 0
+            # to keep the old calculation path unchanged by default.
+
+            is_need_special_equipment = int(getattr(request, 'is_need_special_equipment', 0) or 0)
+            is_need_special_equipment = 1 if is_need_special_equipment == 1 else 0
+
+            if is_need_special_equipment:
+                # Tooling material for composite parts is MDF plate by default.
+                # The helper below calculates only the material part of the tooling:
+                # part OBB -> +20% reserve -> MDF layered blank -> MDF material cost.
+                special_equipment_material_costs = self._calculate_composite_special_equipment_material_costs(request)
+                if special_equipment_material_costs.get('special_equipment_error'):
+                    raise ValueError(special_equipment_material_costs['special_equipment_error'])
+            else:
+                # Keep a zero tooling block in the response so the frontend can read
+                # the same keys regardless of the flag value.
+                special_equipment_material_costs = {
+                    'special_equipment_material_id': COMPOSITE_SPECIAL_EQUIPMENT_MATERIAL,
+                    'special_equipment_material_form': COMPOSITE_SPECIAL_EQUIPMENT_FORM,
+                    'special_equipment_plates_needed': 0.0,
+                    'material_price_special_equipment': 0.0,
+                }
+
+            # Tooling labor heuristic is shared with metal CNC logic:
+            # tooling_hours = part_predicted_hours * SPECIAL_EQUIPMENT_COEF.
+            predicted_hours_special_equipment = (
+                float(predicted_hours) * is_need_special_equipment * SPECIAL_EQUIPMENT_COEF
+            )
+            work_price_special_equipment = predicted_hours_special_equipment * price_of_hour
+
+            # If tooling is disabled, material cost is explicitly multiplied by 0.
+            # This protects the old composite calculation path from any accidental
+            # non-zero defaults in DOP_MATERIALS.
+            material_price_special_equipment = (
+                float(special_equipment_material_costs.get('material_price_special_equipment', 0.0) or 0.0)
+                * is_need_special_equipment
+            )
+            price_special_equipment = calculate_cost(
+                material_price_special_equipment,
+                work_price_special_equipment,
+                location
+            )
+
+            # Tooling is a batch-level cost; distribute it across requested quantity
+            # in the same way as the CNC milling special-equipment cost.
+            price_special_equipment_to_quantity = price_special_equipment / quantity
+
             part_price, price_bw = calculate_cost(
                 material_price,
                 work_price_full,
                 location,
                 breakdown=True
             )
-            detail_price = part_price
+            detail_price = part_price + price_special_equipment_to_quantity
+            price_bw["detail_price (include special_equipment)"] = detail_price
+
             part_price_one = calculate_cost(
                 material_price,
                 work_price_full_one,
                 location
             )
-            detail_price_one = part_price_one
+            detail_price_one = part_price_one + price_special_equipment_to_quantity
             total_price = detail_price * quantity
 
-            price_bw['price_per_square_meter'] = material_costs.get('price_per_square_meter', 0.0)
-            price_bw['one_layer_thickness_mm'] = material_costs.get('one_layer_thickness_mm', 0.0)
-            price_bw['required_stack_thickness_mm'] = material_costs.get('required_stack_thickness_mm', 0.0)
-            price_bw['layer_count'] = material_costs.get('layer_count', 0)
+            material_costs.update(special_equipment_material_costs)
+            material_costs['is_need_special_equipment'] = is_need_special_equipment
+
             price_bw['mat_price_full'] = price_bw.get('mat_price', material_price)
             price_bw['total_time'] = float(predicted_hours)
             price_bw['total_price (include quantity)'] = total_price
+            price_bw['is_need_special_equipment'] = is_need_special_equipment
+            price_bw['material_price_special_equipment'] = material_price_special_equipment
+            price_bw['price_special_equipment'] = price_special_equipment
+            price_bw['price_special_equipment_to_quantity'] = price_special_equipment_to_quantity
 
             manufacturing_cycle = calculate_cycle(cover_id, quantity, k_otk)
 
             # calculation of one detail for front
-            price_special_equipment = 0 # TODO
             detail_price_calculation = self._calculate_detail_calculation(
                 location,
                 detail_price_one,
                 material_price,
-                price_special_equipment
+                price_special_equipment_to_quantity
             )
             response_data = self._create_base_response(
                 file_id=request.file_id,

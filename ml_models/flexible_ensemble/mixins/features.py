@@ -306,7 +306,7 @@ class FeatureEngineeringMixin:
 
     @staticmethod
     def _normalize_gnn_part_key(x: Any) -> str:
-            from flexible_ensemble.gnn_backend import normalize_part_key
+            from ml_models.flexible_ensemble.gnn_backend import normalize_part_key
             return normalize_part_key(x)
 
     @staticmethod

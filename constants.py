@@ -5,6 +5,9 @@ APP_VERSION = "3.3.0"
 # Composite ML model configuration
 COMPOSITE_BUNDLE_PATH = "ml_models/bundle_metalcomposite_lgbm_base.pkl"
 ENABLE_COMPOSITE_MODEL = True
+COMPOSITE_SPECIAL_EQUIPMENT_MATERIAL = "mdf"
+COMPOSITE_SPECIAL_EQUIPMENT_FORM = "plate"
+COMPOSITE_SPECIAL_EQUIPMENT_MARGIN = 1.2
 
 # ML Model Configuration
 ML_REGRESSOR_PATH = "ml_models/cbm_v0.0.cbm" 
@@ -654,6 +657,20 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     }
 }
 
+# external materials for other needs, for example for special_equipment
+DOP_MATERIALS = {
+    "mdf": {
+        "label": "МДФ",
+        "family": "wood",
+        "forms": {
+            "plate": {
+                "price" : 420.99, 
+                "sizes" : "2800x2070x3"
+            }
+        }
+    }
+}
+
 PAINT_COEFFICIENTS = {
     "epoxy": {"base_price": 25.0, "k_type": 1.2, "k_prepare": 1.1},
     "acrylic": {"base_price": 20.0, "k_type": 1.0, "k_prepare": 1.0},
@@ -959,7 +976,7 @@ OTHER_SERVICES = {
     "7": {"label": "Нанесение ЛКМ", "service": "painting"},
     "8": {"label": "Литьё", "service": "casting"},
     "9": {"label": "Другое", "service": "other"},
-    "10": {"label": "Изготовление деталей из ПКМ", "service": "composite"},
+    # "10": {"label": "Изготовление деталей из ПКМ", "service": "composite"},
     "11": {"label": "Испытательные ресурсы", "service": "testing"},
     "12": {"label": "Производство из резины", "service": "rubber"}
 }

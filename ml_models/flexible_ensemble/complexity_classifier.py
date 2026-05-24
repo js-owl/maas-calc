@@ -16,7 +16,7 @@ from sklearn.metrics import (
 )
 from sklearn.pipeline import Pipeline
 
-from flexible_ensemble.trainer import FlexibleRegressorEnsemble
+from ml_models.flexible_ensemble.trainer import FlexibleRegressorEnsemble
 
 
 DEFAULT_PROBABILITY_THRESHOLDS: List[float] = [

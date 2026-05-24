@@ -27,7 +27,7 @@ class UnifiedCalculationRequest(BaseModel):
     tolerance_id: Optional[str] = Field(None, description="Override tolerance ID")
     finish_id: Optional[str] = Field(None, description="Override finish ID")
     k_cert: Optional[List[str]] = Field(None, description="Override certification types")
-    
+
     # Manufacturing-specific parameters
     k_type: Optional[float] = Field(None, ge=0, le=2, description="Type coefficient")
     k_process: Optional[float] = Field(None, ge=0, le=2, description="Process coefficient")
@@ -40,3 +40,12 @@ class UnifiedCalculationRequest(BaseModel):
     # Location and features
     location: Optional[str] = Field(None, description="Location of manufacture")
     features_dict: Optional[Dict[str, Any]] = Field(None, description="Features extracted from model")
+
+    # Composite-specific parameters
+    is_need_special_equipment: Optional[int] = Field(
+        None,
+        ge=0,
+        le=1,
+        description="Whether composite technological tooling is needed: 0 - no, 1 - yes"
+    )
+    
