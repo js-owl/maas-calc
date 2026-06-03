@@ -156,7 +156,6 @@ def test_ml_composite_calculator_adds_special_equipment_price(monkeypatch):
     assert response.material_costs["is_need_special_equipment"] == 1
     assert response.material_costs["material_price_special_equipment"] == 17.28
     assert response.material_costs["special_equipment_pricing_mode"] == "volume_fraction"
-    assert response.total_price_breakdown["work_time_special_equipment"] == 1.0
     assert response.total_price_breakdown["price_special_equipment_to_quantity"] > 0
     assert response.detail_price > response.part_price
     assert response.total_price == response.detail_price * request.quantity

@@ -8,13 +8,6 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 
 from models.response_models import UnifiedCalculationResponse
-from models.calculation_models import (
-    PrintingCalculationRequest,
-    CNCMillingCalculationRequest,
-    CNCLatheCalculationRequest,
-    PaintingCalculationRequest
-)
-
 logger = logging.getLogger(__name__)
 
 

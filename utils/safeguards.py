@@ -6,6 +6,7 @@ import logging
 from typing import Dict, Any, Optional
 from models.base_models import Dimensions, MaterialForm
 from constants import DEFAULTS
+from utils.electroplating_config import ELECTROPLATING_SERVICE_ID, get_defaults
 
 logger = logging.getLogger(__name__)
 
@@ -40,35 +41,22 @@ class SafeguardManager:
                 "cnc_complexity": DEFAULTS["cnc_complexity"],
                 "cnc_setup_time": DEFAULTS["cnc_setup_time"]
             },
-            "cnc-lathe": {
-                "dimensions": Dimensions(length=100.0, width=50.0, height=10.0),
-                "quantity": 1,
-                "material_id": "alum_D16",
-                "material_form": MaterialForm.ROD,
-                "cover_id": DEFAULTS["cover_id_list"],
-                "tolerance_id": DEFAULTS["tolerance_id"],
-                "finish_id": DEFAULTS["finish_id"],
-                "location": DEFAULTS["location"],
-                "k_otk": DEFAULTS["k_otk"],
-                "cnc_complexity": DEFAULTS["cnc_complexity"],
-                "cnc_setup_time": DEFAULTS["cnc_setup_time"]
-            },
-            "painting": {
-                "dimensions": Dimensions(length=100.0, width=50.0, height=10.0),
-                "quantity": 1,
-                "material_id": "alum_D16",
-                "material_form": MaterialForm.SHEET,
-                "cover_id": DEFAULTS["cover_id_list"],
-                "tolerance_id": DEFAULTS["tolerance_id"],
-                "finish_id": DEFAULTS["finish_id"],
-                "location": DEFAULTS["location"],
-                "k_otk": DEFAULTS["k_otk"]
-            },
             "composite": {
                 "quantity": 1,
                 "material_id": "carbon_22502",
                 "material_form": MaterialForm.TEXTILE,
                 "cover_id": DEFAULTS["cover_id_list"],
+                "location": DEFAULTS["location"],
+                "k_otk": DEFAULTS["k_otk"]
+            },
+            ELECTROPLATING_SERVICE_ID: {
+                "quantity": 1,
+                "material_id": "alum_D16",
+                "material_form": MaterialForm.SHEET,
+                "cover_id": [get_defaults()["process_id"]],
+                "electroplating_process_id": get_defaults()["process_id"],
+                "coating_thickness_microns": get_defaults()["coating_thickness_microns"],
+                "processing_depth_microns": get_defaults().get("processing_depth_microns"),
                 "location": DEFAULTS["location"],
                 "k_otk": DEFAULTS["k_otk"]
             }
@@ -103,8 +91,8 @@ class SafeguardManager:
                 warnings.append(f"Using default {key}: {default_value}")
                 logger.warning(f"Using default {key}: {default_value}")
         
-        # Special handling for dimensions
-        if "dimensions" not in safeguarded or safeguarded["dimensions"] is None:
+        # Special handling for dimensions when the selected service uses a dimensions fallback.
+        if "dimensions" in defaults and ("dimensions" not in safeguarded or safeguarded["dimensions"] is None):
             safeguarded["dimensions"] = defaults["dimensions"]
             logger.warning(f"Using default dimensions: {defaults['dimensions']}")
         
@@ -113,7 +101,7 @@ class SafeguardManager:
             safeguard_form = self._validate_material_form(safeguarded["material_id"], safeguarded["material_form"])
             if safeguard_form:
                 safeguarded["material_form"] = safeguard_form
-        logger.info(f"Safeguarded material form: {safeguarded['material_form']}")
+        logger.info(f"Safeguarded material form: {safeguarded.get('material_form')}")
 
         return safeguarded
     

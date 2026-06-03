@@ -1,19 +1,16 @@
 """
-Calculation modules for different manufacturing processes
+Calculation modules for active manufacturing processes.
 """
 
 from .base_calculator import BaseCalculator
 from .printing_calculator import PrintingCalculator
-from .cnc_milling_calculator import CNCMillingCalculator
-from .cnc_lathe_calculator import CNCLatheCalculator
-from .painting_calculator import PaintingCalculator
-from .ml_calculator import MLCompositeCalculator
+from .electroplating_calculator import ElectroplatingAutoCalculator
+from .ml_calculator import MLCompositeCalculator, MLCNCMillingCalculator
 
 __all__ = [
     "BaseCalculator",
     "PrintingCalculator",
-    "CNCMillingCalculator", 
-    "CNCLatheCalculator",
-    "PaintingCalculator",
-    "MLCompositeCalculator"
+    "ElectroplatingAutoCalculator",
+    "MLCompositeCalculator",
+    "MLCNCMillingCalculator",
 ]

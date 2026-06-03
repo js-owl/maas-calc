@@ -167,9 +167,19 @@ class CompositeMLPredictor:
                 return None
             row = self._build_feature_row(file_features, material_info)
             df = pd.DataFrame([row])
-            df["material_bar"] = df["material_bar"].map(
-                {"sheet": "Лист", "rod": "Пруток", "hexagon": "Шестигранник", "textile": "Ткань"}
-            )
+            # The bundle was trained on Russian material-form labels. Preserve
+            # unknown values instead of mapping them to NaN; this is important for
+            # metal CNC milling forms such as plate.
+            material_bar_mapping = {
+                "sheet": "Лист",
+                "plate": "Плита",
+                "rod": "Пруток",
+                "bar": "Пруток",
+                "hexagon": "Шестигранник",
+                "textile": "Ткань",
+            }
+            mapped_material_bar = df["material_bar"].map(material_bar_mapping)
+            df["material_bar"] = mapped_material_bar.fillna(df["material_bar"])
             self._validate_input_columns(df)
 
             required_cols = [str(col) for col in (self._schema or {}).get("required_input_columns", []) if col]

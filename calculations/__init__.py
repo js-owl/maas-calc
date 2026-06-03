@@ -8,8 +8,7 @@ from .core import (
 )
 
 from .printing import calculate_printing_price
-from .cnc import calculate_cnc_milling_price, calculate_cnc_lathe_price
-from .painting import calculate_painting_price
+from .electroplating import calculate_electroplating_parameters
 
 __all__ = [
     # Core functions
@@ -18,5 +17,6 @@ __all__ = [
     'calculate_k_complexity', 'calculate_k_quantity', 'calculate_printing_work_time',
     'calculate_cost', 'calculate_cycle', 'resolve_material',
     # Service-specific functions
-    'calculate_printing_price', 'calculate_cnc_milling_price', 'calculate_cnc_lathe_price', 'calculate_painting_price'
+    'calculate_printing_price',
+    'calculate_electroplating_parameters'
 ]

@@ -1,94 +1,277 @@
-# Manufacturing Calculations API v3.3.0
+# MaaS Backend STL — Manufacturing Calculation API
 
-A unified, modular FastAPI application that provides comprehensive manufacturing cost calculations for 3D printing, CNC milling, CNC lathe, and painting operations with **automatic parameter extraction from CAD files** and **Machine Learning (ML) model integration** for intelligent price prediction.
+FastAPI backend for automated manufacturing price calculations from uploaded CAD files. The service extracts geometric parameters from STL/STP/STEP files, applies material and cost-reference data from `constants.py`, and calculates prices for the currently active MaaS manufacturing services.
 
-## 🚀 Key Features
+## Current active services
 
-### **🤖 Machine Learning Integration**
-- **Intelligent Price Prediction**: ML models trained on historical manufacturing data
-- **Automatic Feature Extraction**: Comprehensive geometric analysis from STL/STP files
-- **Smart Fallback**: Graceful degradation to rule-based calculations when ML features insufficient
-- **Multi-Process Support**: ML models work across all manufacturing processes (printing, CNC milling, CNC lathe, painting)
+| `service_id` | Status | Calculation path |
+|---|---|---|
+| `printing` | active | rule-based calculation from geometry, material, quantity and coefficients |
+| `electroplating_auto` | active | rule-based galvanic treatment calculation from STP/STEP surface area, volume, material family, selected operation and operation-specific time model |
+| `cnc-milling` | active, ML-only | labor intensity from `ml_models.flexible_ensemble` bundle; special-equipment flag from XGBoost classifier |
+| `composite` | active, ML-based | labor intensity from `ml_models.flexible_ensemble` bundle; tooling flag is supplied in the request |
 
-### **Unified API Endpoint**
-- **Single Endpoint**: `/calculate-price` replaces all individual calculation endpoints
-- **JSON-Based**: Clean API design with base64 file upload support
-- **File ID Tracking**: Integration with external service database tracking
-- **Automatic Parameter Extraction**: Extract dimensions and features from STL/STP files
+Removed services:
 
-### **Modular Architecture**
-- **Clean Codebase**: Organized into logical modules (calculators, extractors, models, utils, ml_models)
-- **Reusable Components**: Easy to maintain and extend
-- **Helper Functions**: Centralized configuration data access
-- **Unified Models**: Consistent request/response models across all services
+| `service_id` | Status |
+|---|---|
+| `cnc-lathe` | removed legacy branch; mechanically machined parts must use `cnc-milling` |
+| `painting` | removed from the active calculation API |
 
-### **Manufacturing Services**
-- **3D Printing**: Cost calculation with material and complexity factors
-- **CNC Milling**: Price estimation with tolerance and finish considerations  
-- **CNC Lathe**: Cost calculation for cylindrical geometry machining
-- **Painting**: Price estimation including preparation and certification costs
+The API rejects removed services explicitly. They are also filtered out from service-list endpoints.
 
-## 🆕 What's New in v3.3.0
+## Main calculation endpoint
 
-### **📊 Comprehensive Testing & Documentation**
-- **Complete Test Suite**: Comprehensive test coverage for all scenarios (ML models, rule-based, with/without files)
-- **Process Flow Diagram**: Visual Mermaid diagram showing complete API workflow
-- **Test Results Documentation**: Detailed test results summary with performance metrics
-- **Production Readiness**: Full validation of ML integration and fallback mechanisms
-
-## 🆕 What's New in v3.2.0
-
-### **🤖 Machine Learning Integration**
-- **ML Model Support**: XGBoost models for intelligent manufacturing time prediction
-- **Comprehensive Feature Extraction**: Volume, surface area, OBB dimensions, face/vertex counts, aspect ratios
-- **Dual Engine System**: ML-based predictions with rule-based fallback
-- **Enhanced File Analysis**: Advanced STL/STP processing with trimesh and cadquery
-- **ML Response Fields**: Detailed ML prediction data in API responses
-
-### **Naming Convention Standardization**
-- **Unified Parameter Names**: Standardized all parameter naming to use suffix pattern (`tolerance_id`, `finish_id`, `cover_id`)
-- **API Consistency**: All endpoints now use consistent parameter naming conventions
-- **Version Centralization**: All version references now use `APP_VERSION` from `constants.py`
-- **Code Quality**: Improved maintainability with centralized version management
-
-## 🔄 Process Flow
-
-```mermaid
-graph TD
-    A["Client Request"] --> B{"File Upload?"}
-    B -->|"Yes"| C["File Analysis"]
-    B -->|"No"| D["Use Provided Parameters"]
-    
-    C --> E["STL/STP Extractor"]
-    E --> F["Geometric Feature Extraction"]
-    F --> G{"ML Features Available?"}
-    
-    G -->|"Yes"| H["ML Model Prediction"]
-    G -->|"No"| I["Rule-Based Calculation"]
-    
-    D --> J["Parameter Validation"]
-    J --> K{"ML Features Available?"}
-    K -->|"Yes"| H
-    K -->|"No"| I
-    
-    H --> L["ML Calculator"]
-    I --> M["Rule-Based Calculator"]
-    
-    L --> N["Material Cost Calculation"]
-    M --> N
-    
-    N --> O["Work Price Calculation"]
-    O --> P["Final Price Assembly"]
-    P --> Q["Response with Engine Info"]
-    
-    Q --> R["Client Response"]
-    
-    style H fill:#e1f5fe
-    style L fill:#e1f5fe
-    style I fill:#fff3e0
-    style M fill:#fff3e0
-    style Q fill:#f3e5f5
+```http
+POST /calculate-price
 ```
+
+Request model: `models.request_models.UnifiedCalculationRequest`.
+
+Important fields:
+
+| Field | Meaning |
+|---|---|
+| `service_id` | `printing`, `electroplating_auto`, `cnc-milling`, or `composite` |
+| `file_data` | base64-encoded STL/STP/STEP file; required for `cnc-milling` ML calculation |
+| `file_name` | original file name |
+| `file_type` | `stl`, `stp`, or `step` |
+| `material_id` | material key from `constants.MATERIALS` |
+| `material_form` | material form, for example `powder`, `sheet`, `rod`, `hexagon`, `textile` |
+| `quantity` | number of parts in the order |
+| `location` | production location key from `constants.LOCATIONS` |
+| `cover_id` | post-processing IDs; for `electroplating_auto` may also carry the galvanic process ID as the first item |
+| `electroplating_process_id` | galvanic process ID for `electroplating_auto`; has priority over `cover_id[0]` |
+| `coating_thickness_microns` | coating/layer thickness in microns for deposition and anodizing operations; if omitted, process default is used |
+| `processing_depth_microns` | removal depth in microns for electropolishing/material-removal operations; if omitted, process default is used |
+| `tolerance_id` | tolerance coefficient ID, used by CNC ML calculation |
+| `finish_id` | finish coefficient ID, used by CNC ML calculation |
+| `is_need_special_equipment` | explicit tooling flag for `composite`; CNC tooling flag is predicted by classifier |
+
+## Active calculation logic
+
+### 3D printing: `service_id="printing"`
+
+The printing path is rule-based:
+
+1. Read dimensions from the request or extracted file data.
+2. Resolve material data from `constants.MATERIALS`.
+3. Calculate material volume, material weight and material price.
+4. Estimate printing work time and work price.
+5. Apply coefficients: quantity, cover, type/process, quality control, certification.
+6. Return a unified price response.
+
+Implementation files:
+
+- `calculators/printing_calculator.py`
+- `calculations/printing.py`
+- `calculations/core.py`
+
+### Electroplating: `service_id="electroplating_auto"`
+
+The electroplating path is rule-based and uses STP/STEP geometry from `extractors/stp_extractor.py`. The extractor returns `surface_area` in mm², `volume` in mm³ and OBB dimensions in mm. For galvanic calculation the code converts:
+
+- surface area: mm² → dm²;
+- volume: mm³ → dm³.
+
+Calculation sequence:
+
+1. Resolve the galvanic process from `electroplating_process_id` or, for backward compatibility, from `cover_id[0]`. Canonical process IDs and bath limits are read from `utils.electroplating_config.ELECTROPLATING_OPERATIONS`; short legacy IDs such as `zinc`, `cadmium`, `chrome`, `anodizing` are mapped to canonical operation IDs.
+2. Read the material family from the explicit `constants.MATERIALS[*].electroplating_family` attribute. The code intentionally does not infer families from text. Supported families: `carbon_steel`, `stainless_steel`, `aluminum`, `copper`, `titanium`, `magnesium`.
+3. Validate process compatibility with the material family.
+4. Calculate part mass as `volume_dm3 * density_kg_dm3`, where fallback densities are steel 7.8, aluminum 2.7, copper 8.93, titanium 4.5 and magnesium 1.8 kg/dm³.
+5. Read bath limits from the selected operation: `max_part_size_mm` for dimensions and `max_weight_kg` for maximum total load weight.
+6. Try all axis-aligned OBB orientations in the selected bath and calculate geometric load capacity with a clearance.
+7. For electrolytic processes, calculate current-limited capacity as `max_current_a / (current_density_a_dm2 * surface_area_dm2)`.
+8. Calculate weight-limited capacity as `max_weight_kg / part_weight_kg`. This check uses the total mass of all parts in one bath load, not only the mass of a single part.
+9. Calculate one-bath capacity as `min(geometric_capacity, current_capacity, weight_capacity)`. The actual formula parameter `n` is `min(requested_quantity, one_bath_capacity)`, so a larger order can reduce per-detail labor only up to geometry/current/weight limits.
+10. Calculate the operation time component by the explicit process time model:
+    - `faraday_deposition`: coating deposition by `T=(a*b)/(c*d*e)`, where `a` is `coating_thickness_microns`;
+    - `faraday_layer_growth`: anodic oxide layer growth by the same configured formula, where `a` is oxide-layer thickness;
+    - `faraday_material_removal`: electropolishing/material removal by the same configured formula, where `a` is `processing_depth_microns`, not coating thickness;
+    - `fixed_time`: chemical/preparatory operations, where `fixed_operation_time_min` is used and layer thickness does not affect time.
+11. Add preparation time, 30 minutes by default.
+12. Calculate labor for one part: `(1.18*x)/n + z*k`, where `x` is total operation time, `n` is the calculated one-bath load, `z` is workers by mass and `k` is mounting/dismounting time, 2.5 minutes by default.
+13. Convert labor hours to price using `calculations.core.calculate_cost`.
+
+The response exposes the batching decision through `requested_quantity`, `batch_quantity`, `bath_batch_capacity`, `bath_geometric_capacity`, `bath_current_capacity`, `bath_weight_capacity`, `bath_max_weight_kg`, `batch_weight_kg`, `batch_count` and `batch_quantity_limited_by`.
+
+Implementation files:
+
+- `calculators/electroplating_calculator.py`
+- `calculations/electroplating.py`
+- `utils/electroplating_config.py`
+- `docs/electroplating_constants_patch.py`
+
+`utils/electroplating_config.py` is the single source of truth for galvanic operations, bath sizes, maximum batch weights, material-family compatibility and process time models. `constants.py` should keep only general materials/services data.
+
+### CNC milling: `service_id="cnc-milling"`
+
+The CNC milling path is ML-only. There is no rule-based fallback.
+
+Labor intensity:
+
+- predicted by the `flexible_ensemble` bundle through `utils.composite_ml_predictor`;
+- model artifact: `ml_models/bundle_metalcomposite_lgbm_base.pkl`;
+- package code: `ml_models/flexible_ensemble/`.
+
+Special-equipment flag:
+
+- predicted separately by an XGBoost classifier through `utils.ml_predictor`;
+- target: `is_need_special_equipment`;
+- classifier artifact: `ml_models/base_model_xgb_classification_v0.04.json`;
+- classifier preprocessing still uses scaler, encoder, clusterer and reducer assets configured in `constants.py`.
+
+`ML_SCALER_PATH`, `ML_CLUSTERER_PATH` and `ML_REDUCER_PATH` are intentionally retained because they are part of the XGBoost classifier preprocessing pipeline.
+
+Implementation files:
+
+- `calculators/ml_calculator.py`
+- `utils/composite_ml_predictor.py`
+- `utils/ml_predictor.py`
+- `utils/calculation_router.py`
+
+### Composite: `service_id="composite"`
+
+The composite path uses the same `flexible_ensemble` bundle for labor-intensity prediction. The tooling flag is not predicted by XGBoost; it is supplied by the request as `is_need_special_equipment`.
+
+Composite tooling calculation uses an MDF plate assumption by default:
+
+- default material key: `mdf`;
+- default form: `plate`;
+- the part OBB is expanded by a reserve coefficient;
+- tooling material price is calculated from plate dimensions and required blank volume/layers.
+
+Implementation files:
+
+- `calculators/ml_calculator.py`, class `MLCompositeCalculator`
+- `utils/composite_ml_predictor.py`
+- `calculations/core.py`
+
+## Quantity discount
+
+The old step discount was replaced by a smooth logarithmic interpolation in `calculations/core.py::calculate_k_quantity`.
+
+Control points:
+
+| Quantity | `k_quantity` |
+|---:|---:|
+| 1 | 1.00 |
+| 20 | 0.98 |
+| 100 | 0.95 |
+| 500 | 0.85 |
+| 1000+ | 0.80 |
+
+The coefficient is interpolated in log-space, so unit price decreases smoothly as order quantity grows.
+
+## API endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /` | API information |
+| `GET /health` | health check |
+| `GET /version` | API version from `constants.APP_VERSION` |
+| `POST /calculate-price` | unified price calculation |
+| `POST /generate-previews` | render preview PNG images for STL/STP/STEP files |
+| `GET /materials` | list materials, optionally filtered by process; for `electroplating_auto` also supports `electroplating_process_id` to return only materials compatible with the selected galvanic operation |
+| `GET /material_forms` | list configured material forms for `material_id`; for `electroplating_auto` can also validate compatibility with `electroplating_process_id` |
+| `GET /services` | list available service IDs |
+| `GET /auto_services` | list automatically calculated services |
+| `GET /other_services` | list other/manual service options |
+| `GET /all_services` | list all non-removed services |
+| `GET /coefficients` | tolerance, finish, cover, control and certification coefficients |
+| `GET /locations` | manufacturing locations |
+| `GET /operations_available` | available operations for non-auto services |
+
+## Project structure
+
+```text
+.
+├── main.py                         # FastAPI app and HTTP endpoints
+├── calculations/
+│   ├── core.py                     # shared pricing/math/material helpers
+│   ├── printing.py                 # rule-based 3D printing calculation
+│   ├── electroplating.py           # rule-based galvanic coating calculation
+│   └── __init__.py
+├── calculators/
+│   ├── base_calculator.py          # common response/logging helpers
+│   ├── printing_calculator.py      # active printing calculator
+│   ├── electroplating_calculator.py # active galvanic coating calculator
+│   ├── ml_calculator.py            # CNC milling ML and composite ML calculators
+│   └── __init__.py
+├── extractors/
+│   ├── file_extractor.py           # common file extraction interface
+│   ├── stl_extractor.py            # STL extraction
+│   └── stp_extractor.py            # STP/STEP extraction
+├── ml_models/
+│   ├── base_model_xgb_classification_v0.04.json
+│   ├── bundle_metalcomposite_lgbm*.pkl
+│   ├── bundle_metalcomposite_lgbm*.pkl.manifest.json
+│   └── flexible_ensemble/          # inference/training support package for bundle models
+├── models/
+│   ├── base_models.py              # common Pydantic models/enums
+│   ├── request_models.py           # public request model
+│   ├── response_models.py          # public response model
+│   ├── calculation_models.py       # internal request models
+│   └── error_models.py             # standardized error models
+├── utils/
+│   ├── calculation_router.py       # active service routing
+│   ├── electroplating_config.py    # galvanic process/bath/material-family defaults
+│   ├── composite_ml_predictor.py   # flexible_ensemble bundle inference
+│   ├── ml_predictor.py             # XGBoost special-equipment classifier only
+│   ├── parameter_extractor.py      # CAD feature extraction orchestration
+│   ├── safeguards.py               # default values and request safeguards
+│   ├── validation_utils.py         # request validation
+│   ├── response_utils.py           # standardized response wrapper
+│   ├── generate_previews.py        # preview generation
+│   ├── logging_utils.py
+│   └── versioning.py
+├── scripts/                        # manual testing and service helper scripts
+└── tests/                          # regression and endpoint tests
+```
+
+Removed legacy files are intentionally absent:
+
+- `calculations/cnc.py`
+- `calculators/cnc_milling_calculator.py`
+- `calculators/cnc_lathe_calculator.py`
+- `calculations/painting.py`
+- `calculators/painting_calculator.py`
+
+## Configuration
+
+The app imports operational constants from `constants.py`. This file is expected to define reference data and model paths, including:
+
+- `APP_VERSION`
+- `MATERIALS`
+- `LOCATIONS`
+- `COST_STRUCTURE`
+- `TOLERANCE`
+- `FINISH`
+- `COVER`
+- `CERT_COSTS`
+- `DEFAULTS`
+- `AUTO_SERVICES`
+- `NON_AUTO_SERVICES`
+- `OTHER_SERVICES`
+- `ENABLE_ML_MODELS`
+- `ELECTROPLATING_SERVICE_CONFIG`
+- `ELECTROPLATING_BATHS`
+- `ELECTROPLATING_PROCESS_PARAMS`
+- `ELECTROPLATING_MATERIAL_FAMILIES`
+- `ELECTROPLATING_DEFAULTS`
+- `ML_CLASSIFIER_PATH`
+- `ML_SCALER_PATH`
+- `CLASSIFIER_SCALER_FEATURES_PATH`
+- `ML_CLUSTERER_PATH`
+- `ML_REDUCER_PATH`
+- `ENCODER_PATH`
+- `NUM_CORE_CLASSIFIER_FEATURES`
+- `CLASSIFIER_CATEGORICAL_FEATURES`
+- `SPECIAL_EQUIPMENT_COEF`
+- `SPECIAL_EQUIPMENT_MATERIAL`
+- `SPECIAL_EQUIPMENT_FORM`
+- optional `DOP_MATERIALS` for composite tooling materials
 
 ## 📋 Prerequisites
 
@@ -142,320 +325,41 @@ graph TD
    ```
 
 ## 🔧 API Usage
+Open API docs:
+
+```text
+http://localhost:7000/docs
+```
+
+## Minimal CNC milling request shape
+
+`cnc-milling` requires file data because the ML path needs extracted geometry features.
 
 ### **Unified Endpoint: `/calculate-price`**
 
 #### **Request Format**
 ```json
 {
-  "service_id": "printing",                    // Required: Service type
-  "file_id": "abc123-def456",                 // Optional: External service tracking ID
-  "file_data": "base64_encoded_content...",   // Optional: Base64 file data
-  "file_name": "part.stl",                    // Optional: Original filename
-  "file_type": "stl",                         // Optional: File type (stl/stp)
-  
-  // Override Parameters (optional - will be extracted from file if not provided)
-  "dimensions": {
-    "length": 100.0,
-    "width": 50.0,
-    "thickness": 10.0
-  },
-  "material_id": "PA11",
-  "material_form": "powder",
-  "quantity": 1,
+  "service_id": "cnc-milling",
+  "file_id": "example-001",
+  "file_data": "<base64 step file>",
+  "file_name": "part.stp",
+  "file_type": "stp",
+  "material_id": "alum_D16",
+  "material_form": "plate",
+  "quantity": 10,
+  "tolerance_id": "4",
+  "finish_id": "3",
   "cover_id": ["1"],
-  "tolerance_id": "1",
-  "finish_id": "1",
   "location": "location_1"
 }
 ```
 
-#### **Response Format (ML Model)**
-```json
-{
-  "file_id": "abc123-def456",
-  "filename": "part.stl",
-  "detail_price": 1647.64,
-  "detail_price_one": 1647.64,
-  "total_price": 1647.64,
-  "total_time": 1.789,
-  "mat_volume": 57279.2,
-  "mat_weight": 0.0,
-  "mat_price": 0.0,
-  "work_price": 1642.64,
-  "work_time": 1.789,
-  "k_quantity": 1.0,
-  "k_complexity": 0.75,
-  "k_cover": 1.05,
-  "k_tolerance": 1.0,
-  "k_finish": 1.0,
-  "manufacturing_cycle": 10.0,
-  "suitable_machines": ["3D Printer Default"],
-  "service_id": "printing",
-  "calculation_method": "3D Printing ML Prediction",
-  "calculation_engine": "ml_model",
-  "ml_prediction_hours": 1.789,
-  "features_extracted": {
-    "volume": 57279.2,
-    "surface_area": 33516.2,
-    "obb_x": 115.0,
-    "obb_y": 26.6,
-    "obb_z": 65.0,
-    "face_count": 2462,
-    "vertex_count": 1225,
-    "check_sizes_for_lathe": 0
-  },
-  "material_costs": {
-    "mat_volume": 0.0,
-    "mat_weight": 0.0,
-    "mat_price": 0.0
-  },
-  "work_price_breakdown": {
-    "base_work_price": 1564.42,
-    "k_quantity": 1.0,
-    "k_cover": 1.05,
-    "k_otk": 1.0,
-    "final_work_price": 1642.64
-  },
-  "message": "Calculation completed successfully",
-  "timestamp": "2024-01-15T10:30:00.000Z"
-}
-```
+If ML assets or required geometry features are unavailable, the service returns a calculation error. It does not fall back to rule-based CNC.
 
-#### **Response Format (Rule-Based)**
-```json
-{
-  "file_id": "abc123-def456",
-  "filename": "part.stl",
-  "detail_price": 1551.0,
-  "detail_price_one": 1551.0,
-  "total_price": 1551.0,
-  "total_time": 2.5,
-  "mat_volume": 0.00005,
-  "mat_weight": 0.14,
-  "mat_price": 120.0,
-  "work_price": 1431.0,
-  "work_time": 2.5,
-  "k_quantity": 1.0,
-  "k_complexity": 0.75,
-  "k_cover": 1.05,
-  "k_tolerance": 1.0,
-  "k_finish": 1.0,
-  "manufacturing_cycle": 8.0,
-  "suitable_machines": ["3D Printer Default"],
-  "service_id": "printing",
-  "calculation_method": "3D Printing Price Calculation",
-  "calculation_engine": "rule_based",
-  "message": "Calculation completed successfully",
-  "timestamp": "2024-01-15T10:30:00.000Z"
-}
-```
-
-### **Service IDs**
-- `printing` - 3D Printing
-- `cnc-milling` - CNC Milling
-- `cnc-lathe` - CNC Lathe  
-- `painting` - Painting
-
-### **Configuration Endpoints**
-
-#### **Materials**
-```bash
-GET /materials
-GET /materials?process=printing
-```
-
-#### **Coefficients**
-```bash
-GET /coefficients
-```
-
-#### **Locations**
-```bash
-GET /locations
-```
-
-#### **Services**
-```bash
-GET /services
-```
-
-## 📁 Project Structure
-
-```
-stl/
-├── calculators/           # Manufacturing calculation modules
-│   ├── base_calculator.py
-│   ├── printing_calculator.py
-│   ├── cnc_milling_calculator.py
-│   ├── cnc_lathe_calculator.py
-│   ├── painting_calculator.py
-│   └── ml_calculator.py  # ML-based calculators
-├── extractors/           # File analysis modules
-│   ├── file_extractor.py
-│   ├── stl_extractor.py  # Enhanced with ML features
-│   └── stp_extractor.py  # Enhanced with ML features
-├── models/               # Pydantic data models
-│   ├── base_models.py
-│   ├── request_models.py
-│   ├── response_models.py
-│   └── calculation_models.py
-├── utils/                # Utility functions
-│   ├── parameter_extractor.py
-│   ├── safeguards.py
-│   ├── calculation_router.py
-│   ├── helpers.py
-│   └── ml_predictor.py   # ML model integration
-├── ml_models/            # Machine learning models
-│   ├── base_model_xgb_v0.01.json
-│   └── ohe_v0.01.joblib
-├── tests/                # Test suite
-│   └── test_ml_calculations.py  # ML-specific tests
-├── scripts/              # Utility scripts
-├── main.py              # FastAPI application
-├── constants.py         # Configuration constants
-└── requirements.txt     # Dependencies
-```
-
-## 🤖 ML Model Integration
-
-### **Supported File Types**
-- **STL Files**: Comprehensive geometric analysis using trimesh
-- **STP Files**: Advanced CAD analysis using cadquery
-
-### **Extracted Features**
-- Volume and surface area
-- Oriented Bounding Box (OBB) dimensions
-- Face and vertex counts
-- Aspect ratios and size metrics
-- Lathe suitability analysis
-- Surface entropy and complexity metrics
-
-### **ML Model Details**
-- **Algorithm**: XGBoost Regressor
-- **Training Data**: Historical manufacturing time data
-- **Features**: 50+ geometric and material features
-- **Preprocessing**: One-Hot Encoding for categorical features
-- **Fallback**: Rule-based calculations when ML features insufficient
-
-### **Performance**
-- **ML Prediction Time**: < 100ms
-- **Feature Extraction**: < 2 seconds for complex files
-- **Accuracy**: Improved over rule-based calculations
-- **Reliability**: Graceful fallback ensures 100% uptime
 
 ## 🧪 Testing
 
 Run the complete test suite:
 ```bash
 python -m pytest tests/ -v
-```
-
-Run specific test categories:
-```bash
-# Calculation endpoints
-python -m pytest tests/test_calc_endpoints.py -v
-
-# ML calculations
-python -m pytest tests/test_ml_calculations.py -v
-
-# Invalid cases
-python -m pytest tests/test_invalid_cases.py -v
-
-# Support endpoints
-python -m pytest tests/test_support_endpoints.py -v
-```
-
-### **ML Integration Testing**
-```bash
-# Test ML model with real files
-python examples/api_test_examples.py
-
-# Test specific manufacturing processes
-python examples/run_tests.py
-```
-
-## 🔄 Migration from v2.x
-
-### **Breaking Changes**
-- **Unified Endpoint**: All calculation endpoints replaced with `/calculate-price`
-- **JSON-Only**: Form-based requests no longer supported
-- **File Upload**: Base64 encoding required for file uploads
-- **Service IDs**: Updated naming convention (e.g., `printing` instead of `3dprinting`)
-- **ML Integration**: New response fields for ML model data
-
-### **Migration Guide**
-1. Update endpoint URLs to use `/calculate-price`
-2. Convert form data to JSON format
-3. Update service IDs to new naming convention
-4. Implement base64 file encoding for file uploads
-5. Handle new ML response fields (`calculation_engine`, `ml_prediction_hours`, etc.)
-
-## 📊 Performance
-
-- **Response Time**: < 3 seconds for ML calculations, < 2 seconds for rule-based
-- **File Processing**: STL/STP analysis in < 2 seconds
-- **Concurrent Requests**: Supports multiple simultaneous calculations
-- **Memory Usage**: Optimized for large file processing
-- **ML Model Loading**: Lazy loading for optimal performance
-
-## 🛡️ Error Handling
-
-- **Validation Errors**: 422 status for invalid parameters
-- **File Processing Errors**: 400 status for file-related issues
-- **Calculation Errors**: 500 status for internal errors
-- **ML Model Errors**: Graceful fallback to rule-based calculations
-- **Comprehensive Logging**: Detailed error tracking with file IDs
-
-## 📈 Monitoring
-
-- **Health Check**: `GET /health`
-- **API Documentation**: `GET /docs`
-- **Structured Logging**: JSON-formatted logs with correlation IDs
-- **File Tracking**: Complete audit trail for file processing
-- **ML Model Status**: Engine type tracking in responses
-
-## 🔧 Configuration
-
-### **ML Model Settings** (in `constants.py`)
-```python
-ENABLE_ML_MODELS = True                    # Enable/disable ML models
-ML_FALLBACK_TO_RULES = True               # Fallback to rule-based when ML fails
-ML_MODEL_PATH = "ml_models/base_model_xgb_v0.01.json"
-ENCODER_PATH = "ml_models/ohe_v0.01.joblib"
-```
-
-### **File Processing Settings**
-```python
-MAX_FILE_SIZE = 50 * 1024 * 1024          # 50MB max file size
-SUPPORTED_FILE_TYPES = ["stl", "stp"]     # Supported CAD file types
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass (including ML tests)
-6. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue in the repository
-- Check the API documentation at `/docs`
-- Review the test cases for usage examples
-- Check ML model integration examples in `/examples`
-
----
-
-**Version**: 3.3.0  
-**Last Updated**: January 2024  
-**Python**: 3.8+  
-**FastAPI**: 0.100+  
-**ML Models**: XGBoost 3.0+

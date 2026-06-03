@@ -7,7 +7,7 @@ import numpy as np
 from typing import Dict, Any, Union, List
 from fastapi import HTTPException
 from constants import (
-    MATERIALS, COST_STRUCTURE, COVER, CERT_COSTS, 
+    MATERIALS, COST_STRUCTURE, COVER, 
     CYCLE_TIME_DEFAULTS, ERROR_MESSAGES, MACHINES
 )
 from models.base_models import MaterialForm
@@ -97,9 +97,6 @@ def resolve_material(material_id: str, material_form: Union[str, MaterialForm], 
     if process not in mat["forms"][form_key].get("applicable_processes", []):
         raise HTTPException(status_code=422, detail=f"Form '{form_key}' not allowed for {material_id} in process '{process}'. Allowed: {mat['forms'][form_key].get('applicable_processes', [])}.")
     
-    # Special validation for cnc-lathe
-    if process == "cnc-lathe" and form_key not in ["rod", "bar", "tube"]:
-        raise HTTPException(status_code=422, detail="cnc-lathe requires material_form to be 'rod', 'bar', or 'tube'.")
     
     form_data = mat["forms"][form_key]
     price = form_data["price"]
@@ -144,15 +141,44 @@ def calculate_k_complexity(n_dimensions: int) -> float:
 
 
 def calculate_k_quantity(quantity: int) -> float:
-    """Calculate quantity discount coefficient"""
-    if quantity < 21:
-        return 1.0
-    elif quantity < 101:
-        return 0.95
-    elif quantity < 501:
-        return 0.85
-    else:
-        return 0.8
+    """Calculate quantity discount coefficient with log-space interpolation.
+
+    The previous implementation used hard steps:
+    <21 -> 1.00, <101 -> 0.95, <501 -> 0.85, otherwise -> 0.80.
+
+    The new curve keeps approximately the same business control points,
+    but removes price jumps at threshold quantities. The interpolation is
+    linear over log(quantity), so every additional part has a smaller
+    marginal discount effect than the previous one.
+    """
+    try:
+        safe_quantity = max(int(quantity or 1), 1)
+    except (TypeError, ValueError):
+        safe_quantity = 1
+
+    # Control points are intentionally close to the old step function while
+    # making the dependency continuous. 1000+ parts are capped at 0.80 to avoid
+    # unlimited discount growth for very large quantities.
+    control_points = (
+        (1, 1.00),
+        (20, 0.98),
+        (100, 0.95),
+        (500, 0.85),
+        (1000, 0.80),
+    )
+
+    if safe_quantity <= control_points[0][0]:
+        return control_points[0][1]
+    if safe_quantity >= control_points[-1][0]:
+        return control_points[-1][1]
+
+    log_q = math.log(safe_quantity)
+    for (q0, k0), (q1, k1) in zip(control_points, control_points[1:]):
+        if q0 <= safe_quantity <= q1:
+            t = (log_q - math.log(q0)) / (math.log(q1) - math.log(q0))
+            return round(k0 + (k1 - k0) * t, 4)
+
+    return control_points[-1][1]
 
 
 def calculate_printing_work_time(volume: float) -> float:
@@ -278,7 +304,7 @@ def check_machines(part: dict, processing_type: str, location: str, mode="defaul
                     part_sizes[1] <= machine_info.get("max_y", float('inf')) and
                     part_sizes[2] <= machine_info.get("max_z", float('inf'))):
                     suitable_machines.append(machine_info.get("name", machine_id))
-    elif processing_type in ("lathe", "cnc-lathe"):
+    elif processing_type == "lathe":
         processing_type = processing_type.replace("cnc-", "")
         # For lathe, we check if the part is roughly cylindrical
         x, y, z = part["length"], part["width"], part["height"]

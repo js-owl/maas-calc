@@ -3,21 +3,18 @@ from typing import Dict, Any
 APP_VERSION = "3.3.0"
 
 # Composite ML model configuration
-COMPOSITE_BUNDLE_PATH = "ml_models/bundle_metalcomposite_lgbm_base.pkl"
+COMPOSITE_BUNDLE_PATH = "ml_models/bundle_metalcomposite_lgbm_v0.1.pkl"
 ENABLE_COMPOSITE_MODEL = True
 COMPOSITE_SPECIAL_EQUIPMENT_MATERIAL = "mdf"
 COMPOSITE_SPECIAL_EQUIPMENT_FORM = "plate"
 COMPOSITE_SPECIAL_EQUIPMENT_MARGIN = 1.2
 
 # ML Model Configuration
-ML_REGRESSOR_PATH = "ml_models/cbm_v0.0.cbm" 
 ML_CLASSIFIER_PATH = "ml_models/base_model_xgb_classification_v0.04.json" # predict bool feature for using special equipment
 ML_SCALER_PATH = "ml_models/scaler_v0.04.joblib" 
-REGRESSOR_FEATURES_PATH = "ml_models/cbm_v0_features.pkl" 
 CLASSIFIER_SCALER_FEATURES_PATH = "ml_models/train_features_v0.04.joblib" 
 NUM_CORE_CLASSIFIER_FEATURES = 79 
 CLASSIFIER_CATEGORICAL_FEATURES = ['material_bar'] 
-REGRESSOR_CATEGORICAL_FEATURES = ['material_bar', 'material_name_main']
 ML_CLUSTERER_PATH = "ml_models/kmeans_v0.04.joblib"
 ML_REDUCER_PATH = "ml_models/pca_v0.04.joblib"
 ENCODER_PATH = "ml_models/ohe_v0.04.joblib"
@@ -32,6 +29,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_D16": {
         "label": "Алюминий Д16",
         "family": "alum",
+        "electroplating_family": "aluminum",
         "density": 2800.0,
         "k_handle": 0.03,
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -62,6 +60,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_AMC": {
         "label": "Алюминий АМц", 
         "family": "alum", 
+        "electroplating_family": "aluminum",
         "density": 2800.0, 
         "k_handle": 0.03,
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -88,6 +87,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_AMG3": {
         "label": "Алюминий АМг3", 
         "family": "alum", 
+        "electroplating_family": "aluminum",
         "density": 2800.0, 
         "k_handle": 0.03,
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -118,6 +118,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_AMG6": {
         "label": "Алюминий АМг6", 
         "family": "alum", 
+        "electroplating_family": "aluminum",
         "density": 2800.0, 
         "k_handle": 0.03,
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -148,6 +149,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "steel_12X18H10T": {
         "label": "Сталь 12Х18Н10Т", 
         "family": "steel", 
+        "electroplating_family": "stainless_steel",
         "density": 7850.0, 
         "k_handle": 0.045, 
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -174,6 +176,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "steel_30XGSA": {
         "label": "Сталь 30ХГСА", 
         "family": "steel", 
+        "electroplating_family": "carbon_steel",
         "density": 7850.0, 
         "k_handle": 0.045,
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -204,6 +207,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "PA11": {
         "label": "Порошок PA11", 
         "family": "plastic", 
+        "electroplating_family": None,
         "density": 1020, 
         "k_handle": 0,
         "applicable_processes": ["printing", "painting"],
@@ -222,6 +226,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "PA12": {
         "label": "Порошок PA12", 
         "family": "plastic", 
+        "electroplating_family": None,
         "density": 930, 
         "k_handle": 0,
         "applicable_processes": ["printing", "painting"],
@@ -240,6 +245,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "steel_14X17H2": {
         "label": "Сталь 14Х17Н2", 
         "family": "steel", 
+        "electroplating_family": "stainless_steel",
         "density": 7850.0, 
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -266,6 +272,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_1163": {
         "label": "Алюминий 1163", 
         "family": "alum", 
+        "electroplating_family": "aluminum",
         "density": 2800.0, 
         "k_handle": 0.03,
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -288,6 +295,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_B95och": {
         "label": "Алюминий В95оч", 
         "family": "alum", 
+        "electroplating_family": "aluminum",
         "density": 2800.0, 
         "k_handle": 0.03,
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -310,6 +318,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_ad31": {
         "label": "Алюминий АД31", 
         "family": "alum", 
+        "electroplating_family": "aluminum",
         "density": 2710.0, 
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -336,6 +345,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_ad1": {
         "label": "Алюминий АД1", 
         "family": "alum", 
+        "electroplating_family": "aluminum",
         "density": 2710.0, 
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
@@ -362,6 +372,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_D16T": {
         "label": "Алюминий Д16Т",
         "family": "alum",
+        "electroplating_family": "aluminum",
         "density": 2800.0,
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling", "cnc-lathe"],
@@ -388,6 +399,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "steel_40Х13": {
         "label": "Сталь 40Х13", 
         "family": "steel", 
+        "electroplating_family": "stainless_steel",
         "density": 7770.0, 
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling", "cnc-lathe"],
@@ -410,6 +422,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_АК4": {
         "label": "Алюминий АК4", 
         "family": "alum", 
+        "electroplating_family": "aluminum",
         "density": 2770.0, 
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling"],
@@ -432,6 +445,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "latun_Л63": {
         "label": "Латунь Л63", 
         "family": "latun", 
+        "electroplating_family": "copper",
         "density": 8440.0, 
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling", "cnc-lathe"],
@@ -454,6 +468,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "bronze_БрАЖМц10-3-1.5": {
         "label": "Бронза БрАЖМц10-3-1.5", 
         "family": "bronze", 
+        "electroplating_family": "copper",
         "density": 7500.0, 
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling", "cnc-lathe"],
@@ -476,6 +491,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "steel_45": {
         "label": "Сталь 45", 
         "family": "steel", 
+        "electroplating_family": "carbon_steel",
         "density": 7826.0, 
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling", "cnc-lathe"],
@@ -498,6 +514,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "steel_20": {
         "label": "Сталь 20", 
         "family": "steel", 
+        "electroplating_family": "carbon_steel",
         "density": 7859.0, 
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling", "cnc-lathe"],
@@ -524,6 +541,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "steel_40Х": {
         "label": "Сталь 40Х", 
         "family": "steel", 
+        "electroplating_family": "carbon_steel",
         "density": 7820.0, 
         "k_handle": 0.0,
         "applicable_processes": ["cnc-milling", "cnc-lathe"],
@@ -547,6 +565,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "alum_АК7pch": {
         "label": "Алюминий АК7пч", 
         "family": "alum", 
+        "electroplating_family": "aluminum",
         # "density": 2770.0, 
         # "k_handle": 0.0,
         "applicable_processes": ["other"],
@@ -569,6 +588,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "other": {
         "label": "Другой", 
         "family": "other", 
+        "electroplating_family": None,
         "applicable_processes": ["other"],
         "forms": {
             "sheet": {
@@ -583,6 +603,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "carbon_22502": {
         "label": "Ткань углеродная 22502", 
         "family": "other", 
+        "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "sheet": {
@@ -598,6 +619,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "pre-preg_v180": {
         "label": "Препрег эпоксидный В180", 
         "family": "pre-preg", 
+        "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
@@ -613,6 +635,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "t-10-14": {
         "label": "Ткань стеклянная Т-10-14", 
         "family": "glass", 
+        "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
@@ -628,6 +651,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "pre-preg_kps-2m": {
         "label": "Препрег клеевой КПС-2м", 
         "family": "pre-preg", 
+        "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
@@ -643,6 +667,7 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     "pre-preg_kmks-2m": {
         "label": "Препрег клеевой КМКС-2м", 
         "family": "pre-preg", 
+        "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
@@ -733,6 +758,7 @@ AUTO_SERVICES = {
     "1": {"label": "3D-печать", "service": "printing"},
     "2": {"label": "Механическая обработка", "service": "cnc-milling"},
     "3": {"label": "Изготовление деталей из ПКМ", "service": "composite"},
+    "4": {"label": "Нанесение гальванических покрытий", "service": "electroplating_auto"}
 }
 
 # services with individual pages, save data and translate to bitrix only
@@ -740,229 +766,11 @@ NON_AUTO_SERVICES = {
     "1": {
             "label": "Гальваника", 
             "service": "electroplating",
-            "operations": [
-                {
-                    "id": "aluminum_weld_etching",
-                    "group": "Обработка алюминиевых сплавов",
-                    "path": ["Травление под сварку"],
-                    "max_part_size_mm": (5800, 700, 1500),
-                    "max_weight_kg": 600,
-                },
-                {
-                    "id": "aluminum_chemical_oxidation",
-                    "group": "Обработка алюминиевых сплавов",
-                    "path": ["Химическая оксидация"],
-                    "max_part_size_mm": (5800, 700, 1500),
-                    "max_weight_kg": 600,
-                },
-                {
-                    "id": "aluminum_anodizing_strong",
-                    "group": "Обработка алюминиевых сплавов",
-                    "path": ["Твёрдая анодная оксидация"],
-                    "max_part_size_mm": (5800, 850, 1400),
-                    "max_weight_kg": 600,
-                },
-                {
-                    "id": "aluminum_anodizing_water",
-                    "group": "Обработка алюминиевых сплавов",
-                    "path": ["Анодная оксидация", "Наполнение в воде"],
-                    "max_part_size_mm": (5800, 830, 1400),
-                    "max_weight_kg": 600,
-                },
-                {
-                    "id": "aluminum_anodizing_chrome",
-                    "group": "Обработка алюминиевых сплавов",
-                    "path": ["Анодная оксидация", "Наполнение в хромпике"],
-                    "max_part_size_mm": (5800, 830, 1500),
-                    "max_weight_kg": 600,
-                },
-                {
-                    "id": "aluminum_anodizing_organic_black",
-                    "group": "Обработка алюминиевых сплавов",
-                    "path": [
-                        "Анодная оксидация",
-                        "Наполнение в органических красителях (чёрный/красный)",
-                    ],
-                    "max_part_size_mm": (800, 500, 1300),
-                    "max_weight_kg": 600,
-                },
-                {
-                    "id": "corrosion_resistant_steel_degreasing",
-                    "group": "Химическая обработка коррозионностойких сталей",
-                    "path": ["Химическая пассивация", "Обезжиривание"],
-                    "max_part_size_mm": (2800, 1000, 1100),
-                    "max_weight_kg": 500,
-                },
-                {
-                    "id": "corrosion_resistant_steel_loosening",
-                    "group": "Химическая обработка коррозионностойких сталей",
-                    "path": ["Химическая пассивация", "Рыхление"],
-                    "max_part_size_mm": (2800, 850, 1100),
-                    "max_weight_kg": 500,
-                },
-                {
-                    "id": "corrosion_resistant_steel_etching",
-                    "group": "Химическая обработка коррозионностойких сталей",
-                    "path": ["Химическая пассивация", "Травление"],
-                    "max_part_size_mm": (2800, 1000, 1100),
-                    "max_weight_kg": 500,
-                },
-                {
-                    "id": "corrosion_resistant_steel_passivation",
-                    "group": "Химическая обработка коррозионностойких сталей",
-                    "path": ["Химическая пассивация", "Пассивация"],
-                    "max_part_size_mm": (2800, 850, 1100),
-                    "max_weight_kg": 500,
-                },
-                {
-                    "id": "titanium_degreasing",
-                    "group": "Химическая обработка титана",
-                    "path": ["Обезжиривание"],
-                    "max_part_size_mm": (2800, 800, 900),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "titanium_loosening",
-                    "group": "Химическая обработка титана",
-                    "path": ["Рыхление"],
-                    "max_part_size_mm": (2800, 800, 900),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "titanium_etching",
-                    "group": "Химическая обработка титана",
-                    "path": ["Травление"],
-                    "max_part_size_mm": (2800, 800, 900),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "titanium_passivation",
-                    "group": "Химическая обработка титана",
-                    "path": ["Облагораживание"],
-                    "max_part_size_mm": (2800, 800, 900),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "titanium_passivation",
-                    "group": "Химическая обработка магния",
-                    "path": ["Хроматирование"],
-                    "max_part_size_mm": (1700, 600, 950),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "steel_phosphating_zinc",
-                    "group": "Фосфатирование сталей",
-                    "path": ["Фосфатирование в цинкфосфатной ванне"],
-                    "max_part_size_mm": (1800, 670, 900),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "steel_phosphating_oxide",
-                    "group": "Фосфатирование сталей",
-                    "path": ["Оксидное фосфатирование"],
-                    "max_part_size_mm": (1800, 670, 800),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "galvanization_zinc_phosphating",
-                    "group": "Цинкование",
-                    "path": ["С фосфатированием"],
-                    "max_part_size_mm": (2800, 700, 1000),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "galvanization_zinc_chromating",
-                    "group": "Цинкование",
-                    "path": ["С хроматированием"],
-                    "max_part_size_mm": (2800, 700, 1000),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "cadmium_plating_chlorine_phosphating",
-                    "group": "Кадмирование",
-                    "path": ["Хлористоаммонийное", "С фосфатированием"],
-                    "max_part_size_mm": (2800, 700, 1000),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "cadmium_plating_chlorine_chromating",
-                    "group": "Кадмирование",
-                    "path": ["Хлористоаммонийное", "С хроматированием"],
-                    "max_part_size_mm": (2800, 700, 1000),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "cadmium_plating_sulfuric_phosphating",
-                    "group": "Кадмирование",
-                    "path": ["Сернокислое", "С фосфатированием"],
-                    "max_part_size_mm": (1000, 190, 600),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "cadmium_plating_sulfuric_chromating",
-                    "group": "Кадмирование",
-                    "path": ["Сернокислое", "С хроматированием"],
-                    "max_part_size_mm": (1000, 190, 600),
-                    "max_weight_kg": 10,
-                },
-                {
-                    "id": "nickel_plating_sulfuric_phosphating",
-                    "group": "Никелирование",
-                    "path": ["Хлористое"],
-                    "max_part_size_mm": (1000, 190, 600),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "nickel_plating_sulfuric_chromating",
-                    "group": "Никелирование",
-                    "path": ["Сернокислое"],
-                    "max_part_size_mm": (1000, 190, 600),
-                    "max_weight_kg": 400,
-                },
-                {
-                    "id": "nickel_cadmium",
-                    "group": "Покрытие гальванотермический никель-кадмий",
-                    "path": [],
-                    "max_part_size_mm": (1000, 190, 600),
-                    "max_weight_kg": 10,
-                },
-                {
-                    "id": "tin_bismuth",
-                    "group": "Олово-висмут",
-                    "path": [],
-                    "max_part_size_mm": (1000, 190, 600),
-                    "max_weight_kg": 10,
-                },
-                {
-                    "id": "copper_plating",
-                    "group": "Меднение",
-                    "path": [],
-                    "max_part_size_mm": (1000, 190, 600),
-                    "max_weight_kg": 10,
-                },
-                {
-                    "id": "electropolishing",
-                    "group": "Электрополирование",
-                    "path": [],
-                    "max_part_size_mm": (1000, 190, 600),
-                    "max_weight_kg": 10,
-                },
-                {
-                    "id": "chrome_plating",
-                    "group": "Хромирование",
-                    "path": [],
-                    "max_part_size_mm": (1600, 400, 800),
-                    "max_weight_kg": 10,
-                },
-                {
-                    "id": "silvering",
-                    "group": "Серебрение",
-                    "path": [],
-                    "max_part_size_mm": (150, 150, 30),
-                    "max_weight_kg": 10,
-                },
-            ]
-        }
+    },
+    "2": {
+            "label": "Прочее", 
+            "service": "other",
+    }
 }
 
 # services for other_services page
@@ -976,7 +784,6 @@ OTHER_SERVICES = {
     "7": {"label": "Нанесение ЛКМ", "service": "painting"},
     "8": {"label": "Литьё", "service": "casting"},
     "9": {"label": "Другое", "service": "other"},
-    # "10": {"label": "Изготовление деталей из ПКМ", "service": "composite"},
     "11": {"label": "Испытательные ресурсы", "service": "testing"},
     "12": {"label": "Производство из резины", "service": "rubber"}
 }

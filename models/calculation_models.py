@@ -22,54 +22,27 @@ class PrintingCalculationRequest(BaseModel):
     k_cert: List[str]
     service_id: str
 
-
-class CNCMillingCalculationRequest(BaseModel):
-    """Internal model for CNC milling calculations"""
+class ElectroplatingCalculationRequest(BaseModel):
+    """Internal model for automatic galvanic coating calculations"""
     file_id: str
-    dimensions: Dimensions
+    ml_features: Dict[str, Any]
     material_id: str
-    material_form: MaterialForm
+    material_form: Optional[MaterialForm] = None
     quantity: int
-    cover_id: List[str]
-    tolerance_id: str
-    finish_id: str
     location: str
-    k_otk: float
-    cnc_complexity: str
-    cnc_setup_time: float
+    cover_id: Optional[List[str]] = None
+    electroplating_process_id: Optional[str] = None
+    coating_thickness_microns: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Coating/layer thickness in microns for coating or anodizing processes"
+    )
+    processing_depth_microns: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Material removal depth in microns for electropolishing/material-removal processes"
+    )
+    k_otk: float = 1.0
+    filename: Optional[str] = None
+    service_id: str = "electroplating_auto"
 
-
-class CNCLatheCalculationRequest(BaseModel):
-    """Internal model for CNC lathe calculations"""
-    file_id: str
-    dimensions: Dimensions
-    material_id: str
-    material_form: MaterialForm
-    quantity: int
-    cover_id: List[str]
-    tolerance_id: str
-    finish_id: str
-    location: str
-    k_otk: float
-    cnc_complexity: str
-    cnc_setup_time: float
-
-
-class PaintingCalculationRequest(BaseModel):
-    """Internal model for painting calculations"""
-    file_id: str
-    dimensions: Dimensions
-    material_id: str
-    material_form: MaterialForm
-    quantity: int
-    cover_id: List[str]
-    tolerance_id: str
-    finish_id: str
-    location: str
-    k_otk: float
-    paint_type: Optional[str] = "epoxy"
-    paint_prepare: Optional[str] = "a"
-    paint_primer: Optional[str] = "b"
-    paint_lakery: Optional[str] = "a"
-    control_type: Optional[str] = "1"
-    k_cert: List[str] = []

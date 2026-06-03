@@ -4,6 +4,7 @@ Modular architecture with unified API
 """
 
 import logging
+import os
 from fastapi import FastAPI, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any, Optional
@@ -28,6 +29,21 @@ from constants import (
     FINISH, CONTROL_TYPES, CERT_COSTS, AUTO_SERVICES, NON_AUTO_SERVICES,
     OTHER_SERVICES, APP_VERSION
 )
+from utils.electroplating_config import (
+    ELECTROPLATING_SERVICE_ID,
+    NON_AUTO_ELECTROPLATING_SERVICE,
+    get_baths,
+    get_material_families,
+    get_process_params,
+    infer_material_family,
+    is_material_allowed_for_electroplating,
+    is_material_allowed_for_electroplating_process,
+    get_allowed_material_forms,
+    get_electroplating_process,
+)
+
+# Configure rendering
+os.environ["PYOPENGL_PLATFORM"] = "osmesa"
 
 # Configure logging
 logger = get_logger(__name__)
@@ -95,10 +111,9 @@ async def calculate_price(request: UnifiedCalculationRequest):
     
     This endpoint handles all manufacturing calculations including:
     - 3D Printing (printing)
-    - CNC Milling (cnc-milling) 
-    - CNC Lathe (cnc-lathe)
-    - Painting (painting)
+    - CNC Milling (cnc-milling, ML-only)
     - Composite labor forecast (composite)
+    - Electroplating automatic pricing (electroplating_auto)
     
     Supports file upload via base64 encoding and automatic parameter extraction.
     """
@@ -115,8 +130,25 @@ async def calculate_price(request: UnifiedCalculationRequest):
 
     AUTO_SERVICES_LIST = [v["service"] for v in AUTO_SERVICES.values()]
     
-    if (request.service_id=="cnc-milling" and request.file_data is None) or\
-        (request.service_id not in AUTO_SERVICES_LIST):
+    if request.service_id == "cnc-milling" and request.file_data is None:
+        return ResponseWrapper.calculation_error(
+            message=(
+                "file_data is required for ML-based service_id='cnc-milling'. "
+                "Rule-based CNC milling fallback was removed."
+            ),
+            request_id=getattr(request, 'request_id', None)
+        )
+
+    if request.service_id == ELECTROPLATING_SERVICE_ID and request.file_data is None and not request.features_dict:
+        return ResponseWrapper.calculation_error(
+            message=(
+                "file_data is required for service_id='electroplating_auto' because "
+                "the calculation uses STP/STEP surface_area, volume and OBB dimensions."
+            ),
+            request_id=getattr(request, 'request_id', None)
+        )
+
+    if request.service_id not in AUTO_SERVICES_LIST:
         logger.info("Default request!")
         result = UnifiedCalculationResponse(
             service_id=request.service_id,
@@ -167,9 +199,13 @@ async def calculate_price(request: UnifiedCalculationRequest):
         request_params = request.model_dump(exclude_unset=True, exclude_none=True)
         merged_params = parameter_extractor.merge_parameters(extracted_params, request_params)
         
-        # Add ML features to merged parameters
+        # Add extracted geometry features to merged parameters. The key is named
+        # ml_features for historical compatibility with CNC/composite code, but
+        # electroplating_auto uses the same STP geometry in a rule-based formula.
         if ml_features:
             merged_params['ml_features'] = ml_features
+        elif request.service_id == ELECTROPLATING_SERVICE_ID and request.features_dict:
+            merged_params['ml_features'] = request.features_dict
             
         # Step 3: Apply safeguards for missing parameters
         safeguarded_params = safeguard_manager.apply_safeguards(request.service_id, merged_params)
@@ -295,29 +331,167 @@ async def generate_previews(
             message=f"Preview generation failed: {e}"
         )
 
-@app.get("/materials", tags=["Configuration"])
-async def list_materials(process: Optional[str] = None):
-    """List available materials, optionally filtered by process"""
-    materials_list = []
-    
-    for material_id, material_info in MATERIALS.items():
-        if process and process not in material_info.get("applicable_processes", []):
+def _material_response_item(material_id: str, material_info: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a stable material option payload for UI selectors."""
+    forms = get_allowed_material_forms(material_info)
+    return {
+        "id": material_id,
+        "label": material_info.get("label", ""),
+        "family": material_info.get("family", ""),
+        "density": material_info.get("density", 0.0),
+        "forms": forms,
+        "available_forms": list(forms.keys()),
+        "applicable_processes": material_info.get("applicable_processes", []),
+        "electroplating_family": material_info.get("electroplating_family"),
+    }
+
+
+def _material_form_response_items(
+    material_info: Dict[str, Any],
+    service_id: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Build material_form options from constants.MATERIALS only."""
+    forms = get_allowed_material_forms(material_info)
+    result: List[Dict[str, Any]] = []
+    for form_id, form_info in sorted(forms.items(), key=lambda item: item[0]):
+        form_processes = form_info.get("applicable_processes", [])
+        if (
+            service_id
+            and service_id != ELECTROPLATING_SERVICE_ID
+            and form_processes
+            and service_id not in form_processes
+        ):
             continue
-            
-        materials_list.append({
-            "id": material_id,
-            "label": material_info.get("label", ""),
-            "family": material_info.get("family", ""),
-            "density": material_info.get("density", 0.0),
-            "forms": material_info.get("forms", {}),
-            "applicable_processes": material_info.get("applicable_processes", [])
+        result.append({
+            "id": form_id,
+            "label": form_info.get("label") or form_id,
+            "price": form_info.get("price"),
+            "applicable_processes": form_processes,
+            "one_layer_thickness": form_info.get("one_layer_thickness"),
         })
-    
-    materials_list = sorted(materials_list, key=lambda x: x['label'])
-    
-    data = {"materials": materials_list}
+    return result
+
+
+@app.get("/materials", tags=["Configuration"])
+async def list_materials(
+    process: Optional[str] = None,
+    electroplating_process_id: Optional[str] = None,
+):
+    """List available materials, optionally filtered by service/process.
+
+    For electroplating_auto the optional electroplating_process_id narrows the
+    result to materials whose explicit electroplating_family is allowed for the
+    selected galvanic operation.
+    """
+    if process == ELECTROPLATING_SERVICE_ID and electroplating_process_id:
+        if get_electroplating_process(electroplating_process_id) is None:
+            return ResponseWrapper.validation_error(
+                field="electroplating_process_id",
+                message=f"Invalid electroplating process ID: {electroplating_process_id}",
+                value=electroplating_process_id,
+            )
+
+    materials_list = []
+
+    for material_id, material_info in MATERIALS.items():
+        if process == ELECTROPLATING_SERVICE_ID:
+            try:
+                if electroplating_process_id:
+                    if not is_material_allowed_for_electroplating_process(
+                        material_id, material_info, electroplating_process_id
+                    ):
+                        continue
+                elif not is_material_allowed_for_electroplating(material_id, material_info):
+                    continue
+            except ValueError:
+                continue
+        elif process and process not in material_info.get("applicable_processes", []):
+            continue
+
+        materials_list.append(_material_response_item(material_id, material_info))
+
+    materials_list = sorted(materials_list, key=lambda x: x["label"])
+
+    data = {
+        "materials": materials_list,
+        "process": process,
+        "electroplating_process_id": electroplating_process_id if process == ELECTROPLATING_SERVICE_ID else None,
+    }
     message = f"Materials retrieved successfully{f' for process: {process}' if process else ''}"
     return ResponseWrapper.success_response(data, message)
+
+
+@app.get("/material_forms", tags=["Configuration"])
+async def list_material_forms(
+    material_id: str,
+    service_id: Optional[str] = None,
+    electroplating_process_id: Optional[str] = None,
+):
+    """List material_form options for a selected material.
+
+    For electroplating_auto this also verifies that the material is compatible
+    with the selected electroplating_process_id when that query parameter is
+    provided. The returned forms are never synthesized; they come only from
+    constants.MATERIALS[material_id]["forms"].
+    """
+    material_info = MATERIALS.get(material_id)
+    if material_info is None:
+        return ResponseWrapper.validation_error(
+            field="material_id",
+            message=f"Invalid material ID: {material_id}",
+            value=material_id,
+        )
+
+    if service_id == ELECTROPLATING_SERVICE_ID:
+        try:
+            if electroplating_process_id:
+                if get_electroplating_process(electroplating_process_id) is None:
+                    return ResponseWrapper.validation_error(
+                        field="electroplating_process_id",
+                        message=f"Invalid electroplating process ID: {electroplating_process_id}",
+                        value=electroplating_process_id,
+                    )
+                if not is_material_allowed_for_electroplating_process(
+                    material_id, material_info, electroplating_process_id
+                ):
+                    material_family = infer_material_family(material_id, material_info)
+                    process = get_electroplating_process(electroplating_process_id)
+                    return ResponseWrapper.validation_error(
+                        field="material_id",
+                        message=(
+                            f"Material {material_id} with electroplating_family={material_family} "
+                            f"is not applicable for process {process.get('id') if process else electroplating_process_id}"
+                        ),
+                        value=material_id,
+                    )
+            elif not is_material_allowed_for_electroplating(material_id, material_info):
+                return ResponseWrapper.validation_error(
+                    field="material_id",
+                    message=f"Material {material_id} is not applicable for service {service_id}",
+                    value=material_id,
+                )
+        except ValueError as exc:
+            return ResponseWrapper.validation_error(
+                field="material_id",
+                message=str(exc),
+                value=material_id,
+            )
+
+    elif service_id and service_id not in material_info.get("applicable_processes", []):
+        return ResponseWrapper.validation_error(
+            field="material_id",
+            message=f"Material {material_id} is not applicable for service {service_id}",
+            value=material_id,
+        )
+
+    forms = _material_form_response_items(material_info, service_id=service_id)
+    data = {
+        "material_id": material_id,
+        "service_id": service_id,
+        "electroplating_process_id": electroplating_process_id if service_id == ELECTROPLATING_SERVICE_ID else None,
+        "material_forms": forms,
+    }
+    return ResponseWrapper.success_response(data, "Material forms retrieved successfully")
 
 
 @app.get("/services", tags=["Configuration"])
@@ -387,7 +561,9 @@ async def list_coefficients():
         "finish": [{"id": k, **v} for k, v in FINISH.items()],
         "cover": [{"id": k, **v} for k, v in COVER.items()],
         "control_types": [{"id": k, **v} for k, v in CONTROL_TYPES.items()],
-        "cert_costs": [{"id": k, **v} for k, v in CERT_COSTS.items()]
+        "cert_costs": [{"id": k, **v} for k, v in CERT_COSTS.items()],
+        "electroplating_processes": [{"id": k, **v} for k, v in get_process_params().items()],
+        "electroplating_baths": [{"id": k, **v} for k, v in get_baths().items()]
     }
     return ResponseWrapper.success_response(data, "Coefficients retrieved successfully")
 
@@ -403,10 +579,36 @@ async def list_locations():
 
 @app.get("/operations_available", tags=["Configuration"])
 async def list_operations_available(service_id: str):
-    """List available operations for different services to view on pages"""
-    for i in NON_AUTO_SERVICES.keys():
-        if NON_AUTO_SERVICES[i].get("service")==service_id:
-            operations = NON_AUTO_SERVICES[i].get("operations")
+    """List available operations for different services to view on pages."""
+    if service_id in (NON_AUTO_ELECTROPLATING_SERVICE, ELECTROPLATING_SERVICE_ID):
+        operations = get_process_params().values()
+        data = {
+            "values": [
+                {
+                    "id": op["id"],
+                    "group": op.get("group"),
+                    "path": op.get("path") or [],
+                    "label": " / ".join(
+                        part for part in [str(op.get("group") or ""), *[str(x) for x in (op.get("path") or [])]] if part
+                    ),
+                    "max_part_size_mm": {
+                        "length": op["max_part_size_mm"][0],
+                        "width": op["max_part_size_mm"][1],
+                        "height": op["max_part_size_mm"][2],
+                    },
+                    "max_part_size_label": "×".join(map(str, op["max_part_size_mm"])),
+                    "max_weight_kg": op["max_weight_kg"],
+                    "material_families": op.get("material_families", []),
+                    "profile_key": op.get("profile_key"),
+                }
+                for op in operations
+            ]
+        }
+        return ResponseWrapper.success_response(data, "Operations retrieved successfully")
+
+    for service_data in NON_AUTO_SERVICES.values():
+        if service_data.get("service") == service_id:
+            operations = service_data.get("operations") or []
             data = {
                 "values": [
                     {
@@ -425,7 +627,9 @@ async def list_operations_available(service_id: str):
                     for op in operations
                 ]
             }
-    return ResponseWrapper.success_response(data, "Operations retrieved successfully")
+            return ResponseWrapper.success_response(data, "Operations retrieved successfully")
+
+    return ResponseWrapper.success_response({"values": []}, "Operations retrieved successfully")
 
 if __name__ == "__main__":
     import uvicorn

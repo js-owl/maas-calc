@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from calculations.core import calculate_billable_material_weight
-from calculators.ml_calculator import MLPrintingCalculator
+from calculators.ml_calculator import MLCNCMillingCalculator
 
 
 def test_billable_material_weight_applies_moq_once_per_order():
@@ -18,7 +18,7 @@ def test_billable_material_weight_applies_moq_once_per_order():
 
 
 def test_ml_material_cost_distributes_moq_over_quantity(monkeypatch):
-    calculator = MLPrintingCalculator()
+    calculator = MLCNCMillingCalculator()
 
     monkeypatch.setattr(
         "calculators.ml_calculator.get_material_info",

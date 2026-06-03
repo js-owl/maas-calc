@@ -10,6 +10,13 @@ from constants import (
 )
 from utils.logging_utils import get_logger
 from utils.response_utils import ResponseWrapper
+from utils.electroplating_config import (
+    ELECTROPLATING_SERVICE_ID,
+    get_electroplating_process,
+    get_material_families,
+    infer_material_family,
+    NOT_APPLICABLE_ELECTROPLATING_FAMILY,
+)
 
 logger = get_logger(__name__)
 
@@ -45,39 +52,72 @@ class Validator:
     
     @staticmethod
     def validate_material_id(material_id: str, service_id: str) -> None:
-        """Validate material ID and its applicability to service"""
+        """Validate material ID and its applicability to service."""
         if material_id not in MATERIALS:
             raise ValidationError(
                 field="material_id",
                 message=ERROR_MESSAGES["invalid_material"],
                 value=material_id
             )
-        
+
         material_info = MATERIALS[material_id]
         applicable_processes = material_info.get("applicable_processes", [])
-        
+
+        if service_id == ELECTROPLATING_SERVICE_ID:
+            try:
+                material_family = infer_material_family(material_id, material_info)
+            except ValueError as exc:
+                raise ValidationError(
+                    field="material_id",
+                    message=str(exc),
+                    value=material_id,
+                )
+
+            family_info = get_material_families().get(material_family)
+            if material_family == NOT_APPLICABLE_ELECTROPLATING_FAMILY or not family_info or not family_info.get("allowed_processes"):
+                raise ValidationError(
+                    field="material_id",
+                    message=f"Material {material_id} is not applicable for service {service_id}",
+                    value=material_id,
+                )
+            return
+
         if service_id in AUTO_SERVICES_LIST and service_id not in applicable_processes:
             raise ValidationError(
                 field="material_id",
                 message=f"Material {material_id} is not applicable for service {service_id}",
                 value=material_id
             )
-    
+
     @staticmethod
-    def validate_material_form(material_id: str, material_form: str) -> None:
-        """Validate material form for given material"""
+    def validate_material_form(material_id: str, material_form: str, service_id: str = "") -> None:
+        """Validate material form for the selected material and service."""
         if material_id not in MATERIALS:
             return  # Will be caught by material_id validation
-        
+
         material_info = MATERIALS[material_id]
         forms = material_info.get("forms", {})
-        
+
         if material_form not in forms:
             available_forms = list(forms.keys())
             raise ValidationError(
                 field="material_form",
                 message=f"Invalid material form. Available forms for {material_id}: {available_forms}",
                 value=material_form
+            )
+
+        # For electroplating the material form is kept only for compatibility with
+        # the common request schema; galvanic applicability is defined by
+        # electroplating_family, not by form-level applicable_processes.
+        if service_id == ELECTROPLATING_SERVICE_ID:
+            return
+
+        form_processes = forms.get(material_form, {}).get("applicable_processes", [])
+        if service_id and service_id in AUTO_SERVICES_LIST and service_id not in form_processes:
+            raise ValidationError(
+                field="material_form",
+                message=f"Material form {material_form} is not applicable for service {service_id}",
+                value=material_form,
             )
     
     @staticmethod
@@ -185,12 +225,22 @@ class Validator:
     
     @staticmethod
     def validate_file_type(file_type: str, service_id: str) -> None:
-        """Validate file type and service confirmity"""
-        if file_type=="stl" and service_id in ("cnc-milling", "cnc-lathe", "composite"):
+        """Validate file type and service conformity"""
+        if file_type == "stl" and service_id in ("cnc-milling", "composite", ELECTROPLATING_SERVICE_ID):
             raise ValidationError(
                 field="file_type",
                 message=ERROR_MESSAGES["unsupported_file_type"],
                 value=file_type
+            )
+
+    @staticmethod
+    def validate_electroplating_process(process_id: str) -> None:
+        """Validate electroplating process ID."""
+        if process_id and get_electroplating_process(process_id) is None:
+            raise ValidationError(
+                field="electroplating_process_id",
+                message=f"Invalid electroplating process ID: {process_id}",
+                value=process_id
             )
 
 def validate_calculation_request(request_data: Dict[str, Any]) -> List[ValidationError]:
@@ -213,6 +263,17 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
         except ValidationError as e:
             errors.append(e)
     
+    # Validate material form if provided
+    if "material_id" in request_data and "material_form" in request_data:
+        try:
+            Validator.validate_material_form(
+                request_data["material_id"],
+                request_data["material_form"],
+                request_data.get("service_id", ""),
+            )
+        except ValidationError as e:
+            errors.append(e)
+
     # Validate quantity if provided
     if "quantity" in request_data:
         try:
@@ -234,12 +295,77 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
         except ValidationError as e:
             errors.append(e)
     
-    # Validate cover processing if provided
+    # Validate cover processing if provided. For electroplating_auto cover_id can
+    # carry the galvanic process id for backward compatibility with the existing
+    # frontend request shape.
     if "cover_id" in request_data:
         try:
-            Validator.validate_cover_ids(request_data["cover_id"])
+            if request_data.get("service_id") == ELECTROPLATING_SERVICE_ID:
+                cover_values = request_data.get("cover_id") or []
+                if cover_values:
+                    Validator.validate_electroplating_process(cover_values[0])
+            else:
+                Validator.validate_cover_ids(request_data["cover_id"])
         except ValidationError as e:
             errors.append(e)
+
+    if request_data.get("service_id") == ELECTROPLATING_SERVICE_ID:
+        process_id = request_data.get("electroplating_process_id")
+        process_id = process_id or ((request_data.get("cover_id") or [None])[0])
+        process = None
+        if process_id:
+            try:
+                Validator.validate_electroplating_process(process_id)
+                process = get_electroplating_process(process_id)
+            except ValidationError as e:
+                errors.append(e)
+
+        material_id = request_data.get("material_id")
+        if process and material_id in MATERIALS:
+            try:
+                material_family = infer_material_family(material_id, MATERIALS[material_id])
+                allowed_families = set(process.get("material_families") or [])
+                if allowed_families and material_family not in allowed_families:
+                    raise ValidationError(
+                        field="electroplating_process_id",
+                        message=(
+                            f"Process {process.get('id')} is not applicable for material family "
+                            f"{material_family}. Allowed families: {sorted(allowed_families)}"
+                        ),
+                        value=process_id,
+                    )
+            except ValueError as exc:
+                errors.append(ValidationError(
+                    field="material_id",
+                    message=str(exc),
+                    value=material_id,
+                ))
+            except ValidationError as e:
+                errors.append(e)
+
+        thickness = request_data.get("coating_thickness_microns")
+        if thickness is not None:
+            try:
+                if float(thickness) < 0:
+                    raise ValueError
+            except (TypeError, ValueError):
+                errors.append(ValidationError(
+                    field="coating_thickness_microns",
+                    message="Coating/layer thickness must be a non-negative number",
+                    value=thickness,
+                ))
+
+        processing_depth = request_data.get("processing_depth_microns")
+        if processing_depth is not None:
+            try:
+                if float(processing_depth) < 0:
+                    raise ValueError
+            except (TypeError, ValueError):
+                errors.append(ValidationError(
+                    field="processing_depth_microns",
+                    message="Processing/removal depth must be a non-negative number",
+                    value=processing_depth,
+                ))
     
     # Validate file data if provided
     if all(key in request_data for key in ["file_data", "file_name", "file_type"]):

@@ -8,18 +8,11 @@ based on geometric features extracted from CAD files.
 import logging
 import math
 import re
-import numpy as np
 from typing import Dict, Any, Optional, Tuple
 from datetime import datetime
 
 from .base_calculator import BaseCalculator
 from models.response_models import UnifiedCalculationResponse
-from models.calculation_models import (
-    PrintingCalculationRequest,
-    CNCMillingCalculationRequest,
-    CNCLatheCalculationRequest,
-    PaintingCalculationRequest
-)
 from utils.ml_predictor import ml_predictor
 from utils.composite_ml_predictor import composite_ml_predictor
 from constants import (
@@ -84,20 +77,28 @@ class MLCalculator(BaseCalculator):
             material_form = getattr(request, 'material_form', 'unknown')
             material_info = get_material_info(material_id, material_form)
             
-            # Predict work time using ML model
-            predicted_hours, is_need_special_equipment = ml_predictor.predict_from_file_features(
+            # CNC milling is ML-only. Labor intensity is predicted by the
+            # flexible_ensemble bundle; tooling need remains a separate XGBoost
+            # classifier because it predicts the `is_need_special_equipment` flag.
+            if service_id != 'cnc-milling':
+                raise ValueError(f"MLCalculator supports only service_id='cnc-milling', got {service_id!r}")
+
+            predicted_hours = composite_ml_predictor.predict_from_file_features(
                 ml_features, material_info
             )
-            
+            is_need_special_equipment = ml_predictor.predict_special_equipment_from_file_features(
+                ml_features, material_info
+            )
+
             if predicted_hours is None or is_need_special_equipment is None:
-                raise ValueError("ML predictions failed")
+                raise ValueError("CNC milling ML predictions failed")
 
             # Calculate work price
             price_of_hour = COST_STRUCTURE.get(location, {}).get('price_of_hour', 0)
             work_price = predicted_hours * price_of_hour
             
             # Apply manufacturing coefficients
-            quantity = getattr(request, 'quantity', 0)
+            quantity = max(int(getattr(request, 'quantity', 1) or 1), 1)
             k_quantity = calculate_k_quantity(quantity)
             tolerance_id = getattr(request, 'tolerance_id', '4')
             k_tolerance = TOLERANCE.get(tolerance_id).get('value', 1.0)
@@ -243,11 +244,8 @@ class MLCalculator(BaseCalculator):
             price_per_kg_special_equipment = material_special_equipment_form_data['price'] # rub/kg
             density_special_equipment = material_special_equipment_data['density'] # kg/m3
             
-            if service_id=='cnc-milling' or service_id=='printing':
+            if service_id in ('cnc-milling', 'printing'):
                 volume = obb_x * obb_y * obb_z * 1.1 * 1e-9 # m3
-                
-            elif service_id=='cnc-lathe':
-                volume = np.pi * obb_x * obb_y * obb_z / 4 * 1.1 * 1e-9 # m3
             else:
                 volume = 0.0
 
@@ -628,15 +626,6 @@ class MLCalculator(BaseCalculator):
             return {}
 
 
-class MLPrintingCalculator(MLCalculator):
-    """ML-based calculator for 3D printing"""
-    
-    def __init__(self):
-        super().__init__()
-        self.service_id = "printing"
-        self.calculation_method = "3D Printing ML Prediction"
-
-
 class MLCNCMillingCalculator(MLCalculator):
     """ML-based calculator for CNC milling"""
     
@@ -645,23 +634,6 @@ class MLCNCMillingCalculator(MLCalculator):
         self.service_id = "cnc-milling"
         self.calculation_method = "CNC Milling ML Prediction"
 
-
-class MLCNCLatheCalculator(MLCalculator):
-    """ML-based calculator for CNC lathe"""
-    
-    def __init__(self):
-        super().__init__()
-        self.service_id = "cnc-lathe"
-        self.calculation_method = "CNC Lathe ML Prediction"
-
-
-class MLPaintingCalculator(MLCalculator):
-    """ML-based calculator for painting"""
-    
-    def __init__(self):
-        super().__init__()
-        self.service_id = "painting"
-        self.calculation_method = "Painting ML Prediction"
 
 
 class MLCompositeCalculator(MLCalculator):

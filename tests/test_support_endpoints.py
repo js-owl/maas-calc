@@ -59,8 +59,6 @@ def test_services(client):
     # Check that we have some expected service IDs (using actual names from the endpoint)
     assert "printing" in services
     assert "cnc-milling" in services
-    #assert "cnc-lathe" in services
-    #assert "painting" in services
     assert "bending" in services
 
 

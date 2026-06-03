@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext-dev \
     libx11-dev \
     libgomp1 \
+    libosmesa6 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -99,6 +100,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libx11-6 \
     libglu1 \
     libgomp1 \
+    libosmesa6 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 

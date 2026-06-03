@@ -29,6 +29,13 @@ RUN apt-get update && apt-get install -y \
     libx11-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Install rendering dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libosmesa6 \
+    libglib2.0-0 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy requirements first for better caching
 COPY requirements.txt .
 

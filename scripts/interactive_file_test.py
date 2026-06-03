@@ -23,7 +23,17 @@ from typing import Dict, Any, List, Optional, Tuple
 
 # Add parent directory to path to import constants
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from constants import APP_VERSION, MATERIALS, TOLERANCE, FINISH, COVER, LOCATIONS
+from constants import APP_VERSION, MATERIALS, TOLERANCE, FINISH, COVER
+try:
+    from constants import LOCATIONS
+except ImportError:
+    LOCATIONS = {"location_1": {"name": "location_1"}}
+from utils.electroplating_config import (
+    ELECTROPLATING_SERVICE_ID,
+    get_process_params,
+    infer_material_family,
+    is_material_allowed_for_electroplating,
+)
 
 # API Configuration
 BASE_URL = "http://localhost:7000"
@@ -33,9 +43,8 @@ API_ENDPOINT = f"{BASE_URL}/calculate-price"
 SERVICES = {
     "1": {"id": "printing", "name": "3D Printing"},
     "2": {"id": "cnc-milling", "name": "CNC Milling"},
-    "3": {"id": "cnc-lathe", "name": "CNC Lathe"},
-    "4": {"id": "painting", "name": "Painting"},
-    "5": {"id": "composite", "name": "Composite"},
+    "3": {"id": "composite", "name": "Composite"},
+    "4": {"id": ELECTROPLATING_SERVICE_ID, "name": "Electroplating Auto"},
 }
 
 # Default parameters for quick test mode
@@ -61,35 +70,18 @@ DEFAULT_PARAMS = {
         "cnc_complexity": "medium",
         "cnc_setup_time": 2.0
     },
-    "cnc-lathe": {
-        "material_id": "alum_D16",
-        "material_form": "rod",
-        "quantity": 1,
-        "tolerance_id": "1",
-        "finish_id": "1",
-        "cover_id": ["1"],
-        "k_otk": 1.0,
-        "cnc_complexity": "medium",
-        "cnc_setup_time": 2.0
-    },
-    "painting": {
-        "material_id": "alum_D16",
-        "material_form": "sheet",
-        "quantity": 1,
-        "tolerance_id": "1",
-        "finish_id": "1",
-        "cover_id": ["1"],
-        "k_otk": 1.0,
-        "paint_type": "epoxy",
-        "paint_prepare": "a",
-        "paint_primer": "b",
-        "paint_lakery": "a",
-        "control_type": "1",
-        "k_cert": ["a", "f", "g"]
-    },
     "composite": {
         "material_id": "pre-preg_kmks-2m",
         "quantity": 1,
+    },
+    ELECTROPLATING_SERVICE_ID: {
+        "material_id": "steel_30XGSA",
+        "material_form": "sheet",
+        "quantity": 10,
+        "electroplating_process_id": "galvanization_zinc_phosphating",
+        "cover_id": ["galvanization_zinc_phosphating"],
+        "coating_thickness_microns": 9.0,
+        "k_otk": 1.0,
     },
 }
 
@@ -206,6 +198,22 @@ class InteractiveFileTester:
     def get_material_options(self, service_id: str) -> List[Dict[str, Any]]:
         """Get available materials for the selected service"""
         materials = []
+
+        if service_id == ELECTROPLATING_SERVICE_ID:
+            for material_id, material_info in MATERIALS.items():
+                try:
+                    material_family = infer_material_family(material_id, material_info)
+                except ValueError:
+                    continue
+                if is_material_allowed_for_electroplating(material_id, material_info):
+                    materials.append({
+                        'id': material_id,
+                        'label': material_info.get('label', material_id),
+                        'forms': list(material_info.get('forms', {}).keys()),
+                        'electroplating_family': material_family,
+                    })
+            return sorted(materials, key=lambda x: x['label'])
+
         for material_id, material_info in MATERIALS.items():
             if service_id in material_info.get("applicable_processes", []):
                 materials.append({
@@ -252,7 +260,8 @@ class InteractiveFileTester:
         # Material selection
         print("\nAvailable Materials:")
         for i, material in enumerate(materials, 1):
-            print(f"  [{i}] {material['label']} ({material['id']})")
+            family_note = f" / {material['electroplating_family']}" if material.get('electroplating_family') else ""
+            print(f"  [{i}] {material['label']} ({material['id']}{family_note})")
         
         while True:
             try:
@@ -269,14 +278,11 @@ class InteractiveFileTester:
         
         # Material form selection
         material_info = MATERIALS[params['material_id']]
+        # Use only forms explicitly configured for the selected material.
+        # Do not synthesize sheet/rod/hexagon: composites such as glass cloth
+        # must not suddenly receive rod or hexagon options.
         forms = list(material_info.get('forms', {}).keys())
-        if "sheet" not in forms:
-            forms.append("sheet")
-        if "rod" not in forms:
-            forms.append("rod")
-        if "hexagon" not in forms:
-            forms.append("hexagon")
-        
+
         if forms:
             print(f"\nAvailable Forms for {material_info['label']}:")
             for i, form in enumerate(forms, 1):
@@ -294,7 +300,8 @@ class InteractiveFileTester:
                 except ValueError:
                     print("❌ Please enter a valid number")
         else:
-            params['material_form'] = "powder"  # Default fallback
+            print(f"❌ No material forms configured for {params['material_id']}")
+            return {}
         
         # Quantity
         while True:
@@ -308,6 +315,11 @@ class InteractiveFileTester:
             except ValueError:
                 print("❌ Please enter a valid number")
         
+        if service_id == ELECTROPLATING_SERVICE_ID:
+            self._configure_electroplating_params(params)
+            self._configure_location_param(params)
+            return params
+
         # Cover processing
         print(f"\nCover Processing Options:")
         for key, cover_info in COVER.items():
@@ -316,29 +328,122 @@ class InteractiveFileTester:
         cover_choice = self.get_user_input("Select cover processing (comma-separated for multiple)", list(COVER.keys()))
         params['cover_id'] = [c.strip() for c in cover_choice.split(',') if c.strip() in COVER]
         
-        # Location
-        print(f"\nAvailable Locations:")
-        locations_id = []
-        for id, location_info in enumerate(LOCATIONS.items()):
-            locations_id.append(str(id+1))
-            print(f"  [{id+1}] {location_info[1]['name']}")
-        
-        available_locations = list(LOCATIONS.keys())
-        location_choice = self.get_user_input("Select location", locations_id)
-        params['location'] = available_locations[int(location_choice)-1]
+        self._configure_location_param(params)
         
         # Service-specific parameters
         if service_id == "printing":
             self._configure_printing_params(params)
-        elif service_id in ["cnc-milling", "cnc-lathe"]:
+        elif service_id == "cnc-milling":
             self._configure_cnc_params(params)
-        elif service_id == "painting":
-            self._configure_painting_params(params)
         elif service_id == "composite":
             self._configure_composite_params(params)
 
         return params
     
+    def _configure_location_param(self, params: Dict[str, Any]):
+        """Configure manufacturing location."""
+        print(f"\nAvailable Locations:")
+        locations_id = []
+        for id, location_info in enumerate(LOCATIONS.items()):
+            locations_id.append(str(id + 1))
+            print(f"  [{id + 1}] {location_info[1]['name']}")
+
+        available_locations = list(LOCATIONS.keys())
+        location_choice = self.get_user_input("Select location", locations_id)
+        params['location'] = available_locations[int(location_choice) - 1]
+
+    def _configure_electroplating_params(self, params: Dict[str, Any]):
+        """Configure electroplating_auto specific parameters."""
+        print(f"\nElectroplating Parameters:")
+
+        material_family = infer_material_family(params['material_id'], MATERIALS[params['material_id']])
+        process_params = get_process_params()
+        available_processes = []
+        for process_id, process in process_params.items():
+            if material_family in process.get("material_families", []):
+                available_processes.append((process_id, process))
+
+        if not available_processes:
+            print(f"❌ No electroplating processes available for material family: {material_family}")
+            return
+
+        available_processes.sort(key=lambda item: (str(item[1].get('group') or ''), str(item[1].get('label') or item[0])))
+        print(f"\nAvailable Operations for material family '{material_family}':")
+        for i, (process_id, process) in enumerate(available_processes, 1):
+            group = process.get('group') or 'Без группы'
+            label = process.get('label') or process_id
+            max_size = process.get('max_part_size_mm')
+            max_weight = process.get('max_weight_kg')
+            print(f"  [{i}] {group} / {label} ({process_id}); bath={max_size}, max_weight_kg={max_weight}")
+
+        while True:
+            try:
+                choice = int(self.get_user_input("Select electroplating operation"))
+                if 1 <= choice <= len(available_processes):
+                    selected_process_id, selected_process = available_processes[choice - 1]
+                    params['electroplating_process_id'] = selected_process_id
+                    # Keep cover_id synchronized for backward compatibility with existing request shape.
+                    params['cover_id'] = [selected_process_id]
+                    print(f"✅ Selected: {selected_process.get('label') or selected_process_id}")
+                    break
+                else:
+                    print(f"❌ Invalid choice. Please select 1-{len(available_processes)}")
+            except ValueError:
+                print("❌ Please enter a valid number")
+
+        time_model = selected_process.get('time_model')
+        thickness_role = selected_process.get('thickness_role')
+        if time_model == 'faraday_material_removal':
+            default_depth = float(selected_process.get('default_processing_depth_microns') or 10.0)
+            while True:
+                raw = self.get_user_input(f"Enter electropolishing removal depth in microns [default {default_depth:g}]")
+                if raw == "":
+                    params['processing_depth_microns'] = default_depth
+                    params.pop('coating_thickness_microns', None)
+                    break
+                try:
+                    depth = float(raw)
+                    if depth > 0:
+                        params['processing_depth_microns'] = depth
+                        params.pop('coating_thickness_microns', None)
+                        break
+                    print("❌ Removal depth must be > 0")
+                except ValueError:
+                    print("❌ Please enter a valid number")
+        elif time_model == 'fixed_time':
+            fixed_time = selected_process.get('fixed_operation_time_min')
+            print(f"  Fixed operation time model: {fixed_time} min; thickness is not used in the time formula")
+            params.pop('coating_thickness_microns', None)
+            params.pop('processing_depth_microns', None)
+        else:
+            default_thickness = float(selected_process.get('default_thickness_microns') or 9.0)
+            prompt_label = "oxide layer thickness" if thickness_role == 'oxide_layer_thickness' else "coating thickness"
+            while True:
+                raw = self.get_user_input(f"Enter {prompt_label} in microns [default {default_thickness:g}]")
+                if raw == "":
+                    params['coating_thickness_microns'] = default_thickness
+                    params.pop('processing_depth_microns', None)
+                    break
+                try:
+                    thickness = float(raw)
+                    if thickness > 0:
+                        params['coating_thickness_microns'] = thickness
+                        params.pop('processing_depth_microns', None)
+                        break
+                    print("❌ Thickness must be > 0")
+                except ValueError:
+                    print("❌ Please enter a valid number")
+
+        while True:
+            try:
+                k_otk = float(self.get_user_input("Enter quality control coefficient (0.1-2.0)") or "1.0")
+                if 0.1 <= k_otk <= 2.0:
+                    params['k_otk'] = k_otk
+                    break
+                print("❌ Quality control coefficient must be between 0.1 and 2.0")
+            except ValueError:
+                print("❌ Please enter a valid number")
+
     def _configure_printing_params(self, params: Dict[str, Any]):
         """Configure 3D printing specific parameters"""
         print(f"\n3D Printing Parameters:")
@@ -447,50 +552,6 @@ class InteractiveFileTester:
             except ValueError:
                 print("❌ Please enter a valid number")
     
-    def _configure_painting_params(self, params: Dict[str, Any]):
-        """Configure painting specific parameters"""
-        print(f"\nPainting Parameters:")
-        
-        # Paint type
-        paint_types = ["acrylic", "epoxy", "polyurethane"]
-        print(f"\nPaint Types: {', '.join(paint_types)}")
-        paint_choice = self.get_user_input("Select paint type", paint_types)
-        params['paint_type'] = paint_choice
-        
-        # Process coefficients
-        process_options = ["a", "b", "c"]
-        print(f"\nProcess Options: {', '.join(process_options)}")
-        
-        prepare_choice = self.get_user_input("Select paint preparation", process_options)
-        params['paint_prepare'] = prepare_choice
-        
-        primer_choice = self.get_user_input("Select paint primer", process_options)
-        params['paint_primer'] = primer_choice
-        
-        lakery_choice = self.get_user_input("Select paint lakery", process_options)
-        params['paint_lakery'] = lakery_choice
-        
-        # Control type
-        control_choice = self.get_user_input("Enter control type (1-3)", ["1", "2", "3"])
-        params['control_type'] = control_choice
-        
-        # k_cert
-        cert_options = ["a", "b", "c", "d", "e", "f", "g"]
-        print(f"\nCertification Types: {', '.join(cert_options)}")
-        cert_choice = self.get_user_input("Enter certification types (comma-separated)")
-        params['k_cert'] = [c.strip() for c in cert_choice.split(',') if c.strip() in cert_options]
-        
-        # k_otk
-        while True:
-            try:
-                k_otk = float(self.get_user_input("Enter quality control coefficient (0.1-2.0)"))
-                if 0.1 <= k_otk <= 2.0:
-                    params['k_otk'] = k_otk
-                    break
-                else:
-                    print("❌ Quality control coefficient must be between 0.1 and 2.0")
-            except ValueError:
-                print("❌ Please enter a valid number")
     
     def encode_file(self, file_path: Path) -> str:
         """Read file and encode to base64"""
@@ -535,6 +596,8 @@ class InteractiveFileTester:
         print(f"  Parameters: {len(parameters)} configured")
         if service_id == "composite":
             print("  Debug: composite uses STP feature extraction + separate flexible_ensemble bundle")
+        if service_id == ELECTROPLATING_SERVICE_ID:
+            print("  Debug: electroplating_auto uses STP surface area, volume, OBB bath layout, current and weight batch limits")
         
         # Confirm upload
         confirm = self.get_user_input("Send request? (y/n)", ["y", "n", "yes", "no"])
@@ -609,6 +672,28 @@ class InteractiveFileTester:
             print(f"  Material Cost: ${mat_price:,.2f}")
             print(f"  Work Cost: ${work_price:,.2f}")
         
+        # Electroplating-specific details
+        if results.get('electroplating_process_id'):
+            print(f"\n⚗️ Electroplating:")
+            print(f"  Process: {results.get('electroplating_process_id')}")
+            if results.get('processing_depth_microns') is not None:
+                print(f"  Removal Depth: {results.get('processing_depth_microns')} µm")
+            elif results.get('coating_thickness_microns') is not None:
+                print(f"  Thickness: {results.get('coating_thickness_microns')} µm")
+            print(f"  Time Model: {results.get('process_time_model')}")
+            print(f"  Thickness Role: {results.get('thickness_role')}")
+            print(f"  Surface Area: {results.get('coating_surface_area_dm2')} dm²")
+            print(f"  Part Weight: {results.get('coating_mass_kg')} kg")
+            print(f"  Requested Quantity: {results.get('requested_quantity')}")
+            print(f"  Batch Quantity Used as n: {results.get('batch_quantity')}")
+            print(f"  Batch Capacity: {results.get('bath_batch_capacity')}")
+            print(f"  Geometric Capacity: {results.get('bath_geometric_capacity')}")
+            print(f"  Current Capacity: {results.get('bath_current_capacity')}")
+            print(f"  Weight Capacity: {results.get('bath_weight_capacity')}")
+            print(f"  Max Batch Weight: {results.get('bath_max_weight_kg')} kg")
+            print(f"  Batch Count: {results.get('batch_count')}")
+            print(f"  Limited By: {results.get('batch_quantity_limited_by')}")
+
         # Manufacturing details
         suitable_machines = results.get('suitable_machines', [])
         if suitable_machines:
@@ -687,6 +772,9 @@ class InteractiveFileTester:
             
             if service_id == "composite" and file_info["type"].lower() not in ["stp", "step"]:
                 print("❌ Composite debugging requires STP/STEP file input")
+                continue
+            if service_id == ELECTROPLATING_SERVICE_ID and file_info["type"].lower() not in ["stp", "step"]:
+                print("❌ Electroplating auto requires STP/STEP file input")
                 continue
 
             # Parameter mode selection

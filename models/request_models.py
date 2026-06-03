@@ -10,7 +10,7 @@ from .base_models import BaseModel, Dimensions, MaterialForm
 class UnifiedCalculationRequest(BaseModel):
     """Unified request model for price calculation with file_id tracking"""
     # Required fields
-    service_id: str = Field(..., description="Manufacturing service ID (printing, cnc-milling, cnc-lathe, painting, composite)")
+    service_id: str = Field(..., description="Manufacturing service ID (printing, cnc-milling, composite, electroplating_auto)")
     file_id: Optional[str] = Field(None, description="File ID from external service database for tracking")
     
     # File data (base64 encoded)
@@ -47,5 +47,21 @@ class UnifiedCalculationRequest(BaseModel):
         ge=0,
         le=1,
         description="Whether composite technological tooling is needed: 0 - no, 1 - yes"
+    )
+
+    # Electroplating-specific parameters
+    electroplating_process_id: Optional[str] = Field(
+        None,
+        description="Galvanic process ID for service_id='electroplating_auto'. If omitted, first cover_id is used."
+    )
+    coating_thickness_microns: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Coating/layer thickness in microns for coating or anodizing processes"
+    )
+    processing_depth_microns: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Material removal depth in microns for electropolishing/material-removal processes"
     )
     

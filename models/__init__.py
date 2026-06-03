@@ -6,10 +6,7 @@ from .base_models import BaseModel, Dimensions, MaterialForm
 from .request_models import UnifiedCalculationRequest
 from .response_models import UnifiedCalculationResponse
 from .calculation_models import (
-    PrintingCalculationRequest,
-    CNCMillingCalculationRequest, 
-    CNCLatheCalculationRequest,
-    PaintingCalculationRequest
+    PrintingCalculationRequest
 )
 from .error_models import (
     StandardErrorResponse,
@@ -28,9 +25,6 @@ __all__ = [
     "UnifiedCalculationRequest",
     "UnifiedCalculationResponse",
     "PrintingCalculationRequest",
-    "CNCMillingCalculationRequest",
-    "CNCLatheCalculationRequest", 
-    "PaintingCalculationRequest",
     "StandardErrorResponse",
     "ValidationErrorResponse",
     "FileProcessingErrorResponse",
