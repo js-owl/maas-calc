@@ -17,7 +17,7 @@ def test_materials_endpoint_filters_by_electroplating_process(client):
     data = response.json()["data"]
     material_ids = {material["id"] for material in data["materials"]}
 
-    assert "steel_30XGSA" in material_ids
+    assert "steel_0002" in material_ids
     assert "alum_D16" not in material_ids
     assert "t-10-14" not in material_ids
     assert data["electroplating_process_id"] == "galvanization_zinc_phosphating"
@@ -29,14 +29,14 @@ def test_material_forms_endpoint_returns_only_configured_forms_for_selected_mate
         params={
             "service_id": ELECTROPLATING_SERVICE_ID,
             "electroplating_process_id": "galvanization_zinc_phosphating",
-            "material_id": "steel_30XGSA",
+            "material_id": "steel_0002",
         },
     )
     assert response.status_code == 200
     forms = response.json()["data"]["material_forms"]
     form_ids = {form["id"] for form in forms}
 
-    assert form_ids == set(MATERIALS["steel_30XGSA"]["forms"].keys())
+    assert form_ids == set(MATERIALS["steel_0002"]["forms"].keys())
 
 
 def test_material_forms_endpoint_rejects_material_not_allowed_for_selected_process(client):
@@ -55,8 +55,8 @@ def test_material_forms_endpoint_rejects_material_not_allowed_for_selected_proce
 
 def test_selector_helper_uses_explicit_family_only():
     assert is_material_allowed_for_electroplating_process(
-        "steel_30XGSA",
-        MATERIALS["steel_30XGSA"],
+        "steel_0002",
+        MATERIALS["steel_0002"],
         "galvanization_zinc_phosphating",
     )
     assert not is_material_allowed_for_electroplating_process(

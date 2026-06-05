@@ -613,15 +613,15 @@ ELECTROPLATING_OPERATION_PROFILES: Dict[str, Dict[str, Any]] = {
     "nickel_plating_sulfuric_phosphating": {"profile_key": "nickel_chloride", "material_families": ["carbon_steel", "copper"]},
     "nickel_plating_sulfuric_chromating": {"profile_key": "nickel_sulfate", "material_families": ["carbon_steel", "copper"]},
     "chrome_plating": {"profile_key": "chrome", "material_families": ["carbon_steel", "copper"]},
+    "silvering": {"profile_key": "silvering", "material_families": ["copper", "carbon_steel"]},
 
     # Copper/copper alloys.
     "tin_bismuth": {"profile_key": "tin_bismuth", "material_families": ["copper"]},
-    "silvering": {"profile_key": "silvering", "material_families": ["copper", "carbon_steel"]},
 }
 
 # Preparation/setup time is selected by the concrete electroplating operation.
 # Values are initialized with the previous project-wide default to preserve
-# current pricing. Change individual values here when технологические нормы are
+# current pricing. Change individual values here when timings are
 # clarified for a concrete operation. A value placed directly in
 # ELECTROPLATING_OPERATION_PROFILES[operation_id]["preparation_time_min"] has
 # priority over this map.
@@ -629,7 +629,28 @@ ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS: Dict[str, float] = {
     operation["id"]: float(ELECTROPLATING_DEFAULTS["preparation_time_min"])
     for operation in ELECTROPLATING_OPERATIONS
 }
-
+ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS.update({
+    "tin_bismuth": 32.13,
+    "titanium_etching": 32.62,
+    "steel_phosphating_zinc": 36.2,
+    "steel_phosphating_oxide": 36.2,
+    "corrosion_resistant_steel_degreasing": 30.6,
+    "corrosion_resistant_steel_loosening": 30.6,
+    "corrosion_resistant_steel_etching": 30.6,
+    "corrosion_resistant_steel_passivation": 30.6,
+    "galvanization_zinc_phosphating": 45.95,
+    "galvanization_zinc_chromating": 45.95,
+    "titanium_degreasing": 25.5,
+    "titanium_loosening": 25.5,
+    "titanium_etching": 25.5,
+    "titanium_passivation": 25.5,
+    "aluminum_weld_etching": 27.14,
+    "aluminum_anodizing_strong": 40.79,
+    "aluminum_anodizing_water": 40.79,
+    "aluminum_anodizing_chrome": 40.79,
+    "aluminum_anodizing_organic_black": 40.79,
+    "aluminum_chemical_oxidation": 32.8
+})
 
 def _as_list(value: Any) -> list[Any]:
     if value is None:

@@ -392,318 +392,129 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "thermal_conductivity": 48,
         "relative_coef": 0.95
     },
-    "polymer_0011": {
-        "label": "ПКМ МКТ-5.25",
-        "family": "polymer",
+    "carbon_22502": {
+        "label": "Ткань углеродная 22502", 
+        "family": "other", 
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "sheet": {
+                "one_layer_thickness": 0.208,
+                "price": 2921.0, # m2
+                "applicable_processes": ["composite"],
+            }, 
+        },
+        "material_name": "Ткань углеродная",
+        "material_name_main": "22502",
+        "material_group": "composite",
+    },
+    "pre-preg_v180": {
+        "label": "Препрег эпоксидный В180", 
+        "family": "pre-preg", 
         "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
-                "price": 31450.0,
-                "applicable_processes": ["composite"]
-            }
+                "one_layer_thickness": 0.2,
+                "price": 4930.0, # m2
+                "applicable_processes": ["composite"],
+            }, 
         },
-        "minimum_order_quantity": 10.0,
-        "material_name": "МКТ-5.25",
-        "material_name_main": "ПКМ",
-        "material_group": "Кремнеземные ткани"
+        "material_name": "Препрег",
+        "material_name_main": "В180",
+        "material_group": "composite",
     },
-    "polymer_0012": {
-        "label": "ПКМ Э1",
-        "family": "polymer",
+    "t-10-14": {
+        "label": "Ткань стеклянная Т-10-14", 
+        "family": "glass", 
         "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
-                "price": 195.0,
-                "applicable_processes": ["composite"]
-            }
+                "one_layer_thickness": 0.23,
+                "price": 370.0, # m2
+                "applicable_processes": ["composite"],
+            }, 
         },
-        "minimum_order_quantity": 10.0,
-        "material_name": "Э1",
-        "material_name_main": "ПКМ",
-        "material_group": "Стеклянные ткани"
+        "material_name": "Ткань стеклянная",
+        "material_name_main": "Т-10-14",
+        "material_group": "composite",
     },
-    "polymer_0013": {
-        "label": "ПКМ Э3-180",
-        "family": "polymer",
+    "pre-preg_kps-2m": {
+        "label": "Препрег клеевой КПС-2м", 
+        "family": "pre-preg", 
         "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
-                "price": 125.0,
-                "applicable_processes": ["composite"]
-            }
+                "one_layer_thickness": 0.23,
+                "price": 2693.0, # m2
+                "applicable_processes": ["composite"],
+            }, 
         },
-        "minimum_order_quantity": 10.0,
-        "material_name": "Э3-180",
-        "material_name_main": "ПКМ",
-        "material_group": "Стеклянные ткани"
+        "material_name": "КПС",
+        "material_name_main": "Препрег",
+        "material_group": "composite",
     },
-    "polymer_0014": {
-        "label": "ПКМ ТР-560",
-        "family": "polymer",
+    "pre-preg_kmks-2m": {
+        "label": "Препрег клеевой КМКС-2м", 
+        "family": "pre-preg", 
         "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
-                "price": 90.17,
-                "applicable_processes": ["composite"]
-            }
+                "one_layer_thickness": 0.23,
+                "price": 2712.0, # m2
+                "applicable_processes": ["composite"],
+            }, 
         },
-        "minimum_order_quantity": 10.0,
-        "material_name": "ТР-560",
-        "material_name_main": "ПКМ",
-        "material_group": "Ровинговые стеклянные ткани"
+        "material_name": "КМКС",
+        "material_name_main": "Препрег",
+        "material_group": "composite",
     },
-    "polymer_0015": {
-        "label": "ПКМ 21701",
-        "family": "polymer",
+    "PA11": {
+        "label": "Порошок PA11", 
+        "family": "plastic", 
         "electroplating_family": None,
-        "applicable_processes": ["composite"],
+        "density": 1020, 
+        "k_handle": 0,
+        "applicable_processes": ["printing"],
         "forms": {
-            "textile": {
-                "price": 2848.25,
-                "applicable_processes": ["composite"]
-            },
-            "pre-preg": {
-                "price": 9316.73,
-                "applicable_processes": ["composite"]
+            "powder": {
+                "price": 14000,
+                "applicable_processes": ["printing"],
             }
         },
-        "minimum_order_quantity": 10.0,
-        "material_name": "21701",
-        "material_name_main": "ПКМ",
-        "material_group": "Углеродные ткани"
     },
-    "polymer_0016": {
-        "label": "ПКМ 22502",
-        "family": "polymer",
+    "PA12": {
+        "label": "Порошок PA12", 
+        "family": "plastic", 
         "electroplating_family": None,
-        "applicable_processes": ["composite"],
+        "density": 930, 
+        "k_handle": 0,
+        "applicable_processes": ["printing"],
         "forms": {
-            "textile": {
-                "price": 3862.16,
-                "applicable_processes": ["composite"]
-            },
-            "pre-preg": {
-                "price": 8736.0,
-                "applicable_processes": ["composite"]
+            "powder": {
+                "price": 9200,
+                "applicable_processes": ["printing"],
             }
         },
-        "minimum_order_quantity": 10.0,
-        "material_name": "22502",
-        "material_name_main": "ПКМ",
-        "material_group": "Углеродные ткани"
     },
-    "polymer_0017": {
-        "label": "ПКМ 24252",
-        "family": "polymer",
+    "other": {
+        "label": "Другой", 
+        "family": "other", 
         "electroplating_family": None,
-        "applicable_processes": ["composite"],
+        "applicable_processes": ["other"],
         "forms": {
-            "textile": {
-                "price": 2440.0,
-                "applicable_processes": ["composite"]
-            }
+            "sheet": {
+                "applicable_processes": ["other"],
+            }, 
         },
-        "minimum_order_quantity": 10.0,
-        "material_name": "24252",
-        "material_name_main": "ПКМ",
-        "material_group": "Углеродные ткани"
+        "material_name": "other",
+        "material_name_main": "other",
+        "material_group": "other",
     },
-    "polymer_0018": {
-        "label": "ПКМ Т10",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "textile": {
-                "price": 371.85,
-                "applicable_processes": ["composite"]
-            },
-            "pre-preg": {
-                "price": 2940.0,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "Т10",
-        "material_name_main": "ПКМ",
-        "material_group": "Стеклянные ткани"
-    },
-    "polymer_0019": {
-        "label": "ПКМ Т11",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "textile": {
-                "price": 154.16,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "Т11",
-        "material_name_main": "ПКМ",
-        "material_group": "Стеклянные ткани"
-    },
-    "polymer_0020": {
-        "label": "ПКМ Т13",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "textile": {
-                "price": 126.26,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "Т13",
-        "material_name_main": "ПКМ",
-        "material_group": "Стеклянные ткани"
-    },
-    "polymer_0021": {
-        "label": "ПКМ Т15",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "textile": {
-                "price": 325.0,
-                "applicable_processes": ["composite"]
-            },
-            "pre-preg": {
-                "price": 3240.0,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "Т15",
-        "material_name_main": "ПКМ",
-        "material_group": "Стеклянные ткани"
-    },
-    "polymer_0022": {
-        "label": "ПКМ Т23",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "textile": {
-                "price": 166.67,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "Т23",
-        "material_name_main": "ПКМ",
-        "material_group": "Стеклянные ткани"
-    },
-    "polymer_0023": {
-        "label": "ПКМ Т64",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "textile": {
-                "price": 1070.0,
-                "applicable_processes": ["composite"]
-            },
-            "pre-preg": {
-                "price": 4145.0,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "Т64",
-        "material_name_main": "ПКМ",
-        "material_group": "Стеклянные ткани"
-    },
-    "polymer_0024": {
-        "label": "ПКМ ТС-8/3-К",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "textile": {
-                "price": 10485.93,
-                "applicable_processes": ["composite"]
-            },
-            "pre-preg": {
-                "price": 17022.0,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "ТС-8/3-К",
-        "material_name_main": "ПКМ",
-        "material_group": "Кварцевые ткани"
-    },
-    "polymer_0025": {
-        "label": "ПКМ КТ11",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "textile": {
-                "price": 1410.0,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "КТ11",
-        "material_name_main": "ПКМ",
-        "material_group": "Кремнеземные ткани"
-    },
-    "polymer_0026": {
-        "label": "ПКМ 10270",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "pre-preg": {
-                "price": 16080.0,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "10270",
-        "material_name_main": "ПКМ",
-        "material_group": "Углеродные ткани"
-    },
-    "polymer_0027": {
-        "label": "ПКМ 10524",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "pre-preg": {
-                "price": 14428.0,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "10524",
-        "material_name_main": "ПКМ",
-        "material_group": "Углеродные ткани"
-    },
-    "polymer_0028": {
-        "label": "ПКМ Т25",
-        "family": "polymer",
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "pre-preg": {
-                "price": 5144.0,
-                "applicable_processes": ["composite"]
-            }
-        },
-        "minimum_order_quantity": 10.0,
-        "material_name": "Т25",
-        "material_name_main": "ПКМ",
-        "material_group": "Стеклянные ткани"
-    }
+
 }
 
 # external materials for other needs, for example for special_equipment

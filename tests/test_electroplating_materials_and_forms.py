@@ -16,10 +16,10 @@ from utils.validation_utils import validate_calculation_request
 
 
 def test_material_families_are_explicit_and_composites_are_not_applicable():
-    assert infer_material_family("steel_30XGSA", MATERIALS["steel_30XGSA"]) == "carbon_steel"
-    assert infer_material_family("steel_14X17H2", MATERIALS["steel_14X17H2"]) == "stainless_steel"
+    assert infer_material_family("steel_0002", MATERIALS["steel_0002"]) == "carbon_steel"
+    assert infer_material_family("steel_0001", MATERIALS["steel_0001"]) == "stainless_steel"
     assert infer_material_family("alum_D16", MATERIALS["alum_D16"]) == "aluminum"
-    assert infer_material_family("latun_Л63", MATERIALS["latun_Л63"]) == "copper"
+    assert infer_material_family("latun_0007", MATERIALS["latun_0007"]) == "copper"
     assert infer_material_family("t-10-14", MATERIALS["t-10-14"]) == NOT_APPLICABLE_ELECTROPLATING_FAMILY
     assert not is_material_allowed_for_electroplating("t-10-14", MATERIALS["t-10-14"])
 
@@ -52,7 +52,7 @@ def test_non_galvanic_material_is_rejected_for_electroplating_auto():
 def test_galvanic_material_and_real_form_are_accepted():
     request_data = {
         "service_id": ELECTROPLATING_SERVICE_ID,
-        "material_id": "steel_30XGSA",
+        "material_id": "steel_0002",
         "material_form": "rod",
         "quantity": 1,
         "file_type": "step",
