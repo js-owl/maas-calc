@@ -30,9 +30,8 @@ except ImportError:
     LOCATIONS = {"location_1": {"name": "location_1"}}
 from utils.electroplating_config import (
     ELECTROPLATING_SERVICE_ID,
+    get_material_families,
     get_process_params,
-    infer_material_family,
-    is_material_allowed_for_electroplating,
 )
 
 # API Configuration
@@ -75,8 +74,7 @@ DEFAULT_PARAMS = {
         "quantity": 1,
     },
     ELECTROPLATING_SERVICE_ID: {
-        "material_id": "steel_30XGSA",
-        "material_form": "sheet",
+        "electroplating_family": "carbon_steel",
         "quantity": 10,
         "electroplating_process_id": "galvanization_zinc_phosphating",
         "cover_id": ["galvanization_zinc_phosphating"],
@@ -200,19 +198,7 @@ class InteractiveFileTester:
         materials = []
 
         if service_id == ELECTROPLATING_SERVICE_ID:
-            for material_id, material_info in MATERIALS.items():
-                try:
-                    material_family = infer_material_family(material_id, material_info)
-                except ValueError:
-                    continue
-                if is_material_allowed_for_electroplating(material_id, material_info):
-                    materials.append({
-                        'id': material_id,
-                        'label': material_info.get('label', material_id),
-                        'forms': list(material_info.get('forms', {}).keys()),
-                        'electroplating_family': material_family,
-                    })
-            return sorted(materials, key=lambda x: x['label'])
+            return []
 
         for material_id, material_info in MATERIALS.items():
             if service_id in material_info.get("applicable_processes", []):
@@ -224,6 +210,19 @@ class InteractiveFileTester:
         materials = sorted(materials, key=lambda x: x['label'])
         return materials
     
+    def get_electroplating_family_options(self) -> List[Dict[str, Any]]:
+        """Get available material families for electroplating_auto."""
+        families = []
+        for family_id, family_info in get_material_families().items():
+            if family_info.get('allowed_processes'):
+                families.append({
+                    'id': family_id,
+                    'label': family_info.get('label', family_id),
+                    'density_kg_dm3': family_info.get('density_kg_dm3'),
+                    'allowed_processes': family_info.get('allowed_processes', []),
+                })
+        return sorted(families, key=lambda x: x['label'])
+
     def configure_parameters_quick(self, service_id: str, file_type: str) -> Dict[str, Any]:
         """Configure parameters using defaults for quick testing"""
         # Find service name from service_id
@@ -250,59 +249,75 @@ class InteractiveFileTester:
         self.print_header("Custom Parameter Configuration")
         
         params = {}
-        
-        # Get available materials
-        materials = self.get_material_options(service_id)
-        if not materials:
-            print("❌ No materials available for this service")
-            return {}
-        
-        # Material selection
-        print("\nAvailable Materials:")
-        for i, material in enumerate(materials, 1):
-            family_note = f" / {material['electroplating_family']}" if material.get('electroplating_family') else ""
-            print(f"  [{i}] {material['label']} ({material['id']}{family_note})")
-        
-        while True:
-            try:
-                choice = int(self.get_user_input("Select material"))
-                if 1 <= choice <= len(materials):
-                    selected_material = materials[choice - 1]
-                    params['material_id'] = selected_material['id']
-                    print(f"✅ Selected: {selected_material['label']}")
-                    break
-                else:
-                    print(f"❌ Invalid choice. Please select 1-{len(materials)}")
-            except ValueError:
-                print("❌ Please enter a valid number")
-        
-        # Material form selection
-        material_info = MATERIALS[params['material_id']]
-        # Use only forms explicitly configured for the selected material.
-        # Do not synthesize sheet/rod/hexagon: composites such as glass cloth
-        # must not suddenly receive rod or hexagon options.
-        forms = list(material_info.get('forms', {}).keys())
 
-        if forms:
-            print(f"\nAvailable Forms for {material_info['label']}:")
-            for i, form in enumerate(forms, 1):
-                print(f"  [{i}] {form}")
-            
+        if service_id == ELECTROPLATING_SERVICE_ID:
+            families = self.get_electroplating_family_options()
+            if not families:
+                print("❌ No electroplating material families configured")
+                return {}
+
+            print("\nAvailable Electroplating Material Families:")
+            for i, family in enumerate(families, 1):
+                print(f"  [{i}] {family['label']} ({family['id']}), density={family.get('density_kg_dm3')}")
+
             while True:
                 try:
-                    choice = int(self.get_user_input("Select material form"))
-                    if 1 <= choice <= len(forms):
-                        params['material_form'] = forms[choice - 1]
-                        print(f"✅ Selected: {forms[choice - 1]}")
+                    choice = int(self.get_user_input("Select electroplating material family"))
+                    if 1 <= choice <= len(families):
+                        selected_family = families[choice - 1]
+                        params['electroplating_family'] = selected_family['id']
+                        print(f"✅ Selected: {selected_family['label']}")
                         break
-                    else:
-                        print(f"❌ Invalid choice. Please select 1-{len(forms)}")
+                    print(f"❌ Invalid choice. Please select 1-{len(families)}")
                 except ValueError:
                     print("❌ Please enter a valid number")
         else:
-            print(f"❌ No material forms configured for {params['material_id']}")
-            return {}
-        
+            # Get available materials
+            materials = self.get_material_options(service_id)
+            if not materials:
+                print("❌ No materials available for this service")
+                return {}
+
+            # Material selection
+            print("\nAvailable Materials:")
+            for i, material in enumerate(materials, 1):
+                print(f"  [{i}] {material['label']} ({material['id']})")
+
+            while True:
+                try:
+                    choice = int(self.get_user_input("Select material"))
+                    if 1 <= choice <= len(materials):
+                        selected_material = materials[choice - 1]
+                        params['material_id'] = selected_material['id']
+                        print(f"✅ Selected: {selected_material['label']}")
+                        break
+                    print(f"❌ Invalid choice. Please select 1-{len(materials)}")
+                except ValueError:
+                    print("❌ Please enter a valid number")
+
+            # Material form selection
+            material_info = MATERIALS[params['material_id']]
+            forms = list(material_info.get('forms', {}).keys())
+
+            if forms:
+                print(f"\nAvailable Forms for {material_info['label']}:")
+                for i, form in enumerate(forms, 1):
+                    print(f"  [{i}] {form}")
+
+                while True:
+                    try:
+                        choice = int(self.get_user_input("Select material form"))
+                        if 1 <= choice <= len(forms):
+                            params['material_form'] = forms[choice - 1]
+                            print(f"✅ Selected: {forms[choice - 1]}")
+                            break
+                        print(f"❌ Invalid choice. Please select 1-{len(forms)}")
+                    except ValueError:
+                        print("❌ Please enter a valid number")
+            else:
+                print(f"❌ No material forms configured for {params['material_id']}")
+                return {}
+
         # Quantity
         while True:
             try:
@@ -356,7 +371,7 @@ class InteractiveFileTester:
         """Configure electroplating_auto specific parameters."""
         print(f"\nElectroplating Parameters:")
 
-        material_family = infer_material_family(params['material_id'], MATERIALS[params['material_id']])
+        material_family = params['electroplating_family']
         process_params = get_process_params()
         available_processes = []
         for process_id, process in process_params.items():

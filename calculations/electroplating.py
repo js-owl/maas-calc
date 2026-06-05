@@ -7,13 +7,16 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 
 from utils.electroplating_config import (
     ELECTROPLATING_SERVICE_ID,
+    NOT_APPLICABLE_ELECTROPLATING_FAMILY,
     all_orientations,
     get_baths,
     get_defaults,
     get_electroplating_process,
     get_material_families,
+    get_electroplating_material_family,
     infer_material_family,
     normalize_electroplating_process_id,
+    normalize_material_family_id,
 )
 
 
@@ -88,18 +91,42 @@ def resolve_electroplating_process(
 
 
 def resolve_material_family_for_electroplating(
-    material_id: str,
-    material_info: Mapping[str, Any],
+    electroplating_family: Optional[str] = None,
+    material_id: Optional[str] = None,
+    material_info: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
-    family_id = infer_material_family(material_id, material_info)
-    families = get_material_families()
-    family = families.get(family_id)
-    if not family:
+    """Resolve the material family used by electroplating_auto.
+
+    New frontend requests should pass electroplating_family directly because the
+    electroplating price does not depend on a concrete material_id. material_id
+    remains supported as a backward-compatible fallback. If both are supplied,
+    they must describe the same family.
+    """
+    requested_family_id = normalize_material_family_id(electroplating_family)
+    fallback_family_id: Optional[str] = None
+
+    if material_info is not None and material_id:
+        fallback_family_id = infer_material_family(material_id, material_info)
+
+    if requested_family_id == NOT_APPLICABLE_ELECTROPLATING_FAMILY:
+        if fallback_family_id:
+            requested_family_id = fallback_family_id
+        else:
+            raise ValueError(
+                "electroplating_family is required for service_id='electroplating_auto'. "
+                "material_id is accepted only as a backward-compatible fallback."
+            )
+
+    if fallback_family_id and fallback_family_id != requested_family_id:
         raise ValueError(
-            f"Cannot infer electroplating material family for material_id={material_id!r}. "
-            "Set MATERIALS[material_id]['electroplating_family'] in constants.py."
+            f"electroplating_family={requested_family_id!r} does not match "
+            f"MATERIALS[{material_id!r}]['electroplating_family']={fallback_family_id!r}"
         )
-    return {"id": family_id, **family}
+
+    family = get_electroplating_material_family(requested_family_id)
+    if not family:
+        raise ValueError(f"Unknown or not applicable electroplating_family: {electroplating_family!r}")
+    return family
 
 
 def validate_process_for_material_family(process: Mapping[str, Any], material_family: Mapping[str, Any]) -> None:
@@ -424,17 +451,22 @@ def calculate_electroplating_labor_hours(
 def calculate_electroplating_parameters(
     *,
     features: Mapping[str, Any],
-    material_id: str,
-    material_info: Mapping[str, Any],
-    process_id: Optional[str],
-    cover_id: Optional[list[str]],
-    coating_thickness_microns: Optional[float],
-    quantity: int,
+    material_id: Optional[str] = None,
+    material_info: Optional[Mapping[str, Any]] = None,
+    electroplating_family: Optional[str] = None,
+    process_id: Optional[str] = None,
+    cover_id: Optional[list[str]] = None,
+    coating_thickness_microns: Optional[float] = None,
+    quantity: int = 1,
     processing_depth_microns: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Calculate geometry/process/labor parameters before money conversion."""
     process = resolve_electroplating_process(process_id, cover_id)
-    material_family = resolve_material_family_for_electroplating(material_id, material_info)
+    material_family = resolve_material_family_for_electroplating(
+        electroplating_family=electroplating_family,
+        material_id=material_id,
+        material_info=material_info,
+    )
     validate_process_for_material_family(process, material_family)
 
     geometry = convert_geometry_to_electroplating_units(features)
@@ -454,7 +486,13 @@ def calculate_electroplating_parameters(
         processing_depth_microns=processing_depth_microns,
         material_family=material_family,
     )
-    preparation_time_min = _safe_float(get_defaults().get("preparation_time_min"), 30.0)
+    defaults = get_defaults()
+    preparation_time_min = _safe_float(
+        process.get("preparation_time_min"),
+        _safe_float(defaults.get("preparation_time_min"), 30.0),
+    )
+    if preparation_time_min < 0:
+        raise ValueError(f"preparation_time_min must be >= 0 for process {process.get('id')!r}")
     operation_time_min = coating_time["coating_time_min"] + preparation_time_min
     labor = calculate_electroplating_labor_hours(
         operation_time_min=operation_time_min,

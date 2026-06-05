@@ -51,8 +51,6 @@ class SafeguardManager:
             },
             ELECTROPLATING_SERVICE_ID: {
                 "quantity": 1,
-                "material_id": "alum_D16",
-                "material_form": MaterialForm.SHEET,
                 "cover_id": [get_defaults()["process_id"]],
                 "electroplating_process_id": get_defaults()["process_id"],
                 "coating_thickness_microns": get_defaults()["coating_thickness_microns"],

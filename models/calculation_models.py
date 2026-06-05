@@ -26,8 +26,9 @@ class ElectroplatingCalculationRequest(BaseModel):
     """Internal model for automatic galvanic coating calculations"""
     file_id: str
     ml_features: Dict[str, Any]
-    material_id: str
+    material_id: Optional[str] = None
     material_form: Optional[MaterialForm] = None
+    electroplating_family: Optional[str] = None
     quantity: int
     location: str
     cover_id: Optional[List[str]] = None

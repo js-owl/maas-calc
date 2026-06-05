@@ -13,8 +13,11 @@ from utils.response_utils import ResponseWrapper
 from utils.electroplating_config import (
     ELECTROPLATING_SERVICE_ID,
     get_electroplating_process,
+    get_electroplating_material_family,
     get_material_families,
     infer_material_family,
+    is_material_family_allowed_for_electroplating_process,
+    normalize_material_family_id,
     NOT_APPLICABLE_ELECTROPLATING_FAMILY,
 )
 
@@ -234,6 +237,18 @@ class Validator:
             )
 
     @staticmethod
+    def validate_electroplating_family(family_id: str) -> None:
+        """Validate electroplating material family ID."""
+        normalized = normalize_material_family_id(family_id)
+        family = get_electroplating_material_family(normalized)
+        if family is None:
+            raise ValidationError(
+                field="electroplating_family",
+                message=f"Invalid electroplating family ID: {family_id}",
+                value=family_id,
+            )
+
+    @staticmethod
     def validate_electroplating_process(process_id: str) -> None:
         """Validate electroplating process ID."""
         if process_id and get_electroplating_process(process_id) is None:
@@ -320,20 +335,30 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
             except ValidationError as e:
                 errors.append(e)
 
+        requested_family = request_data.get("electroplating_family")
         material_id = request_data.get("material_id")
-        if process and material_id in MATERIALS:
+        resolved_family = None
+
+        if requested_family:
             try:
-                material_family = infer_material_family(material_id, MATERIALS[material_id])
-                allowed_families = set(process.get("material_families") or [])
-                if allowed_families and material_family not in allowed_families:
+                Validator.validate_electroplating_family(requested_family)
+                resolved_family = normalize_material_family_id(requested_family)
+            except ValidationError as e:
+                errors.append(e)
+
+        if material_id in MATERIALS:
+            try:
+                material_family_from_material = infer_material_family(material_id, MATERIALS[material_id])
+                if resolved_family and material_family_from_material != resolved_family:
                     raise ValidationError(
-                        field="electroplating_process_id",
+                        field="electroplating_family",
                         message=(
-                            f"Process {process.get('id')} is not applicable for material family "
-                            f"{material_family}. Allowed families: {sorted(allowed_families)}"
+                            f"electroplating_family={resolved_family} does not match "
+                            f"MATERIALS[{material_id!r}]['electroplating_family']={material_family_from_material}"
                         ),
-                        value=process_id,
+                        value=requested_family,
                     )
+                resolved_family = resolved_family or material_family_from_material
             except ValueError as exc:
                 errors.append(ValidationError(
                     field="material_id",
@@ -342,6 +367,36 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
                 ))
             except ValidationError as e:
                 errors.append(e)
+
+        if not resolved_family:
+            errors.append(ValidationError(
+                field="electroplating_family",
+                message=(
+                    "electroplating_family is required for service_id='electroplating_auto'. "
+                    "material_id is accepted only as a backward-compatible fallback."
+                ),
+                value=requested_family,
+            ))
+
+        if process and resolved_family:
+            allowed_families = set(process.get("material_families") or [])
+            if not is_material_family_allowed_for_electroplating_process(resolved_family, process_id):
+                # New frontend flow sends electroplating_family explicitly, so a
+                # family/process mismatch is best reported on electroplating_family.
+                # Legacy requests may still send only material_id; in that case the
+                # invalid user choice is the selected electroplating_process_id for
+                # the material-derived family. Keep the old field-level contract so
+                # existing tests and clients can highlight the process selector.
+                mismatch_field = "electroplating_family" if requested_family else "electroplating_process_id"
+                mismatch_value = resolved_family if requested_family else process_id
+                errors.append(ValidationError(
+                    field=mismatch_field,
+                    message=(
+                        f"Process {process.get('id')} is not applicable for electroplating_family "
+                        f"{resolved_family}. Allowed families: {sorted(allowed_families)}"
+                    ),
+                    value=mismatch_value,
+                ))
 
         thickness = request_data.get("coating_thickness_microns")
         if thickness is not None:

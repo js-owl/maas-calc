@@ -23,6 +23,7 @@ class MaterialForm(str, Enum):
     HEXAGON = "hexagon"
     TEXTILE = "textile"
     PLATE = "plate"
+    PREPREG = "pre-preg"
 
 
 class Dimensions(BaseModel):
@@ -53,3 +54,12 @@ class CalculationMethod(str, Enum):
     CNC_MILLING_PRICE = "CNC Milling Price Calculation"
     COMPOSITE_ML = "Composite ML Prediction"
     ELECTROPLATING_AUTO = "Electroplating Auto Calculation"
+
+
+class ElectroplatingFamily(str, Enum):
+    CARBON = "carbon_steel"
+    STAINLESS = "stainless_steel"
+    ALUMINIUM = "aluminum"
+    COPPER = "copper"
+    TITANIUM = "titanium"
+    MAGNESIUM = "magnesium"

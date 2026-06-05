@@ -35,9 +35,11 @@ class ElectroplatingAutoCalculator(BaseCalculator):
             if not features:
                 raise ValueError("STP/STEP geometry features are required for electroplating_auto")
 
-            material_info = MATERIALS.get(request.material_id)
-            if not material_info:
-                raise ValueError(f"Unknown material_id: {request.material_id!r}")
+            material_info = None
+            if request.material_id:
+                material_info = MATERIALS.get(request.material_id)
+                if not material_info:
+                    raise ValueError(f"Unknown material_id: {request.material_id!r}")
 
             quantity = max(int(request.quantity or 1), 1)
             location = request.location
@@ -45,11 +47,18 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                 features=features,
                 material_id=request.material_id,
                 material_info=material_info,
+                electroplating_family=request.electroplating_family,
                 process_id=request.electroplating_process_id,
                 cover_id=request.cover_id,
                 coating_thickness_microns=request.coating_thickness_microns,
                 processing_depth_microns=request.processing_depth_microns,
                 quantity=quantity,
+            )
+            
+            logger.info(
+                "Successfully calculated process params for %s: %r",
+                self.service_id,
+                process_params
             )
 
             layout = process_params["layout"]
@@ -85,6 +94,7 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                 "total_time": process_params["labor_time_hours"],
                 "process_id": process_params["process"]["id"],
                 "process_label": process_params["process"].get("label"),
+                "electroplating_family": process_params["material_family"].get("id"),
                 "process_time_model": process_params["time_model"],
                 "thickness_role": process_params["thickness_role"],
                 "coating_thickness_microns": process_params.get("coating_thickness_microns"),
@@ -135,6 +145,7 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                 extracted_dimensions=features.get("dimensions"),
                 calculation_engine="rule_based",
                 electroplating_process_id=process_params["process"]["id"],
+                electroplating_family=process_params["material_family"].get("id"),
                 coating_thickness_microns=process_params.get("coating_thickness_microns"),
                 processing_depth_microns=process_params.get("processing_depth_microns"),
                 process_parameter_microns=process_params.get("process_parameter_microns"),
@@ -155,6 +166,7 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                 batch_quantity_limited_by=layout["batch_quantity_limited_by"],
                 material_costs={
                     "material_id": request.material_id,
+                    "electroplating_family": process_params["material_family"].get("id"),
                     "material_family": process_params["material_family"],
                     "part_volume_dm3": process_params["geometry"]["volume_dm3"],
                     "part_weight_kg": process_params["part_weight_kg"],

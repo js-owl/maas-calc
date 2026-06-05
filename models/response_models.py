@@ -71,6 +71,7 @@ class UnifiedCalculationResponse(BaseModel):
 
     # Electroplating-specific fields
     electroplating_process_id: Optional[str] = Field(None, description="Galvanic process ID used in electroplating_auto")
+    electroplating_family: Optional[str] = Field(None, description="Material family ID used in electroplating_auto")
     coating_thickness_microns: Optional[float] = Field(None, description="Coating/layer thickness in microns, if applicable")
     processing_depth_microns: Optional[float] = Field(None, description="Material removal depth in microns, if applicable")
     process_parameter_microns: Optional[float] = Field(None, description="Micron-scale process parameter actually used by the selected time model")

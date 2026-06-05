@@ -34,6 +34,7 @@ from utils.electroplating_config import (
     NON_AUTO_ELECTROPLATING_SERVICE,
     get_baths,
     get_material_families,
+    get_material_families_for_process,
     get_process_params,
     infer_material_family,
     is_material_allowed_for_electroplating,
@@ -370,6 +371,41 @@ def _material_form_response_items(
             "one_layer_thickness": form_info.get("one_layer_thickness"),
         })
     return result
+
+
+@app.get("/electroplating_material_families", tags=["Configuration"])
+async def list_electroplating_material_families(
+    electroplating_process_id: Optional[str] = None,
+):
+    """List material family options for electroplating_auto.
+
+    Frontend flow for the new electroplating request shape:
+    1. choose electroplating_process_id;
+    2. request this endpoint with electroplating_process_id;
+    3. send the selected electroplating_family in /calculate-price.
+    """
+    if electroplating_process_id and get_electroplating_process(electroplating_process_id) is None:
+        return ResponseWrapper.validation_error(
+            field="electroplating_process_id",
+            message=f"Invalid electroplating process ID: {electroplating_process_id}",
+            value=electroplating_process_id,
+        )
+
+    families = get_material_families_for_process(electroplating_process_id)
+    values = []
+    for family_id, family in sorted(families.items(), key=lambda item: str(item[1].get("label") or item[0])):
+        values.append({
+            "id": family_id,
+            "label": family.get("label") or family_id,
+            "density_kg_dm3": family.get("density_kg_dm3"),
+            "allowed_processes": family.get("allowed_processes", []),
+        })
+
+    data = {
+        "values": values,
+        "electroplating_process_id": electroplating_process_id,
+    }
+    return ResponseWrapper.success_response(data, "Electroplating material families retrieved successfully")
 
 
 @app.get("/materials", tags=["Configuration"])

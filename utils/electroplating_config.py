@@ -256,237 +256,275 @@ ELECTROPLATING_OPERATIONS: list[Dict[str, Any]] = [
 # - fixed_time: chemical/preparatory operation; configured fixed_operation_time_min is used.
 # Current densities are in A/dm², max current is in A.
 PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
-    'tin_bismuth': {'label': 'Олово-висмут',
-                 'material_families': ['copper'],
-                 'deposited_material': 'tin_bismuth',
-                 'deposited_density_kg_dm3': 7.31,
-                 'current_density_a_dm2': 0.5,
-                 'max_current_a': 150.0,
-                 'electrochemical_equivalent': 2.214,
-                 'current_efficiency': 0.9,
-                 'default_thickness_microns': 9.0,
-                 'is_electrolytic': True,
-                 'time_model': 'faraday_deposition',
-                 'thickness_role': 'coating_thickness',
-                 'requires_thickness_input': False,
-                 'requires_processing_depth_input': False},
-    'nickel_chloride': {'label': 'Никелирование хлористое',
-                     'material_families': ['carbon_steel', 'copper'],
-                     'deposited_material': 'nickel',
-                     'deposited_density_kg_dm3': 8.9,
-                     'current_density_a_dm2': 1.0,
-                     'max_current_a': 150.0,
-                     'electrochemical_equivalent': 1.095,
-                     'current_efficiency': 0.95,
-                     'default_thickness_microns': 12.0,
-                     'is_electrolytic': True,
-                     'time_model': 'faraday_deposition',
-                     'thickness_role': 'coating_thickness',
-                     'requires_thickness_input': False,
-                     'requires_processing_depth_input': False},
-    'nickel_sulfate': {'label': 'Никелирование сернокислое',
-                    'material_families': ['carbon_steel', 'copper'],
-                    'deposited_material': 'nickel',
-                    'deposited_density_kg_dm3': 8.9,
-                    'current_density_a_dm2': 1.0,
-                    'max_current_a': 150.0,
-                    'electrochemical_equivalent': 1.095,
-                    'current_efficiency': 0.95,
-                    'default_thickness_microns': 12.0,
-                    'is_electrolytic': True,
-                    'time_model': 'faraday_deposition',
-                    'thickness_role': 'coating_thickness',
-                    'requires_thickness_input': False,
-                    'requires_processing_depth_input': False},
-    'zinc': {'label': 'Цинкование',
-          'material_families': ['carbon_steel'],
-          'deposited_material': 'zinc',
-          'deposited_density_kg_dm3': 7.14,
-          'current_density_a_dm2': 2.0,
-          'max_current_a': 1200.0,
-          'electrochemical_equivalent': 1.22,
-          'current_efficiency': 0.95,
-          'default_thickness_microns': 9.0,
-          'is_electrolytic': True,
-          'time_model': 'faraday_deposition',
-          'thickness_role': 'coating_thickness',
-          'requires_thickness_input': False,
-          'requires_processing_depth_input': False},
-    'anodizing': {'label': 'Анодная оксидация',
-               'material_families': ['aluminum'],
-               'deposited_material': 'aluminum_oxide',
-               'deposited_density_kg_dm3': 2.7,
-               'current_density_a_dm2': 2.0,
-               'max_current_a': 1200.0,
-               'electrochemical_equivalent': 0.335,
-               'current_efficiency': 0.7,
-               'default_thickness_microns': 3.0,
-               'is_electrolytic': True,
-               'time_model': 'faraday_layer_growth',
-               'thickness_role': 'oxide_layer_thickness',
-               'requires_thickness_input': False,
-               'requires_processing_depth_input': False},
-    'hard_anodizing': {'label': 'Твёрдая анодная оксидация',
-                    'material_families': ['aluminum'],
-                    'deposited_material': 'aluminum_oxide',
-                    'deposited_density_kg_dm3': 2.7,
-                    'current_density_a_dm2': 2.0,
-                    'max_current_a': 900.0,
-                    'electrochemical_equivalent': 0.335,
-                    'current_efficiency': 0.65,
-                    'default_thickness_microns': 30.0,
-                    'is_electrolytic': True,
-                    'time_model': 'faraday_layer_growth',
-                    'thickness_role': 'oxide_layer_thickness',
-                    'requires_thickness_input': False,
-                    'requires_processing_depth_input': False},
-    'chrome': {'label': 'Хромирование',
-            'material_families': ['carbon_steel', 'copper'],
-            'deposited_material': 'chrome',
-            'deposited_density_kg_dm3': 7.19,
-            'current_density_a_dm2': 50.0,
-            'max_current_a': 2500.0,
-            'electrochemical_equivalent': 0.323,
-            'current_efficiency': 0.18,
-            'default_thickness_microns': 9.0,
-            'is_electrolytic': True,
-            'time_model': 'faraday_deposition',
-            'thickness_role': 'coating_thickness',
-            'requires_thickness_input': False,
-            'requires_processing_depth_input': False},
-    'cadmium': {'label': 'Кадмирование',
-             'material_families': ['carbon_steel'],
-             'deposited_material': 'cadmium',
-             'deposited_density_kg_dm3': 8.65,
-             'current_density_a_dm2': 0.5,
-             'max_current_a': 100.0,
-             'electrochemical_equivalent': 2.096,
-             'current_efficiency': 0.9,
-             'default_thickness_microns': 9.0,
-             'is_electrolytic': True,
-             'time_model': 'faraday_deposition',
-             'thickness_role': 'coating_thickness',
-             'requires_thickness_input': False,
-             'requires_processing_depth_input': False},
-    'electropolishing': {'label': 'Электрохимическое полирование',
-                      'material_families': ['stainless_steel'],
-                      'current_density_a_dm2': 50.0,
-                      'max_current_a': 1000.0,
-                      'electrochemical_equivalent': 1.042,
-                      'current_efficiency': 0.8,
-                      'is_electrolytic': True,
-                      'removed_material': 'stainless_steel',
-                      'removed_material_density_kg_dm3': 7.8,
-                      'default_processing_depth_microns': 10.0,
-                      'time_model': 'faraday_material_removal',
-                      'thickness_role': 'removed_layer_depth',
-                      'requires_thickness_input': False,
-                      'requires_processing_depth_input': False},
-    'copper': {'label': 'Меднение',
-            'material_families': ['carbon_steel'],
-            'deposited_material': 'copper',
-            'deposited_density_kg_dm3': 8.96,
-            'current_density_a_dm2': 1.0,
-            'max_current_a': 150.0,
-            'electrochemical_equivalent': 1.186,
-            'current_efficiency': 0.95,
-            'default_thickness_microns': 12.0,
-            'is_electrolytic': True,
-            'time_model': 'faraday_deposition',
-            'thickness_role': 'coating_thickness',
-            'requires_thickness_input': False,
-            'requires_processing_depth_input': False},
-    'nickel_cadmium': {'label': 'Гальванотермический никель-кадмий',
-                    'material_families': ['carbon_steel'],
-                    'deposited_material': 'nickel_cadmium',
-                    'deposited_density_kg_dm3': 8.0,
-                    'current_density_a_dm2': 0.5,
-                    'max_current_a': 100.0,
-                    'electrochemical_equivalent': 2.096,
-                    'current_efficiency': 0.9,
-                    'default_thickness_microns': 9.0,
-                    'is_electrolytic': True,
-                    'time_model': 'faraday_deposition',
-                    'thickness_role': 'coating_thickness',
-                    'requires_thickness_input': False,
-                    'requires_processing_depth_input': False},
-    'silvering': {'label': 'Серебрение',
-               'material_families': [],
-               'deposited_material': 'silver',
-               'deposited_density_kg_dm3': 10.49,
-               'current_density_a_dm2': 0.5,
-               'max_current_a': 150.0,
-               'electrochemical_equivalent': 4.025,
-               'current_efficiency': 0.95,
-               'default_thickness_microns': 9.0,
-               'is_electrolytic': True,
-               'time_model': 'faraday_deposition',
-               'thickness_role': 'coating_thickness',
-               'requires_thickness_input': False,
-               'requires_processing_depth_input': False},
-    'chemical_phosphating': {'label': 'Химическое фосфатирование',
-                          'material_families': ['carbon_steel'],
-                          'default_thickness_microns': 5.0,
-                          'is_electrolytic': False,
-                          'fixed_operation_time_min': 30.0,
-                          'time_model': 'fixed_time',
-                          'thickness_role': 'conversion_layer_reference',
-                          'requires_thickness_input': False,
-                          'requires_processing_depth_input': False},
-    'pickling': {'label': 'Травление',
-              'material_families': ['stainless_steel', 'aluminum', 'titanium'],
-              'default_thickness_microns': 0.0,
-              'is_electrolytic': False,
-              'fixed_operation_time_min': 30.0,
-              'time_model': 'fixed_time',
-              'thickness_role': 'not_applicable',
-              'requires_thickness_input': False,
-              'requires_processing_depth_input': False},
-    'degreasing': {'label': 'Обезжиривание',
-                'material_families': ['stainless_steel', 'titanium'],
-                'default_thickness_microns': 0.0,
-                'is_electrolytic': False,
-                'fixed_operation_time_min': 30.0,
-                'time_model': 'fixed_time',
-                'thickness_role': 'not_applicable',
-                'requires_thickness_input': False,
-                'requires_processing_depth_input': False},
-    'loosening': {'label': 'Рыхление',
-               'material_families': ['stainless_steel', 'titanium'],
-               'default_thickness_microns': 0.0,
-               'is_electrolytic': False,
-               'fixed_operation_time_min': 30.0,
-               'time_model': 'fixed_time',
-               'thickness_role': 'not_applicable',
-               'requires_thickness_input': False,
-               'requires_processing_depth_input': False},
-    'chemical_passivation': {'label': 'Химическая пассивация',
-                          'material_families': ['stainless_steel', 'copper', 'titanium'],
-                          'default_thickness_microns': 0.0,
-                          'is_electrolytic': False,
-                          'fixed_operation_time_min': 30.0,
-                          'time_model': 'fixed_time',
-                          'thickness_role': 'not_applicable',
-                          'requires_thickness_input': False,
-                          'requires_processing_depth_input': False},
-    'chemical_oxidation': {'label': 'Химическая оксидация',
-                        'material_families': ['aluminum'],
-                        'default_thickness_microns': 3.0,
-                        'is_electrolytic': False,
-                        'fixed_operation_time_min': 30.0,
-                        'time_model': 'fixed_time',
-                        'thickness_role': 'conversion_layer_reference',
-                        'requires_thickness_input': False,
-                        'requires_processing_depth_input': False},
-    'chromating': {'label': 'Хроматирование',
-                'material_families': ['magnesium'],
-                'default_thickness_microns': 3.0,
-                'is_electrolytic': False,
-                'fixed_operation_time_min': 30.0,
-                'time_model': 'fixed_time',
-                'thickness_role': 'conversion_layer_reference',
-                'requires_thickness_input': False,
-                'requires_processing_depth_input': False}
+    'tin_bismuth': {
+        'label': 'Олово-висмут',
+        'material_families': ['copper'],
+        'deposited_material': 'tin_bismuth',
+        'deposited_density_kg_dm3': 7.31,
+        'current_density_a_dm2': 0.5,
+        'max_current_a': 150.0,
+        'electrochemical_equivalent': 2.214,
+        'current_efficiency': 0.9,
+        'default_thickness_microns': 9.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_deposition',
+        'thickness_role': 'coating_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'nickel_chloride': {
+        'label': 'Никелирование хлористое',
+        'material_families': ['carbon_steel', 'copper'],
+        'deposited_material': 'nickel',
+        'deposited_density_kg_dm3': 8.9,
+        'current_density_a_dm2': 1.0,
+        'max_current_a': 150.0,
+        'electrochemical_equivalent': 1.095,
+        'current_efficiency': 0.95,
+        'default_thickness_microns': 12.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_deposition',
+        'thickness_role': 'coating_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'nickel_sulfate': {
+        'label': 'Никелирование сернокислое',
+        'material_families': ['carbon_steel', 'copper'],
+        'deposited_material': 'nickel',
+        'deposited_density_kg_dm3': 8.9,
+        'current_density_a_dm2': 1.0,
+        'max_current_a': 150.0,
+        'electrochemical_equivalent': 1.095,
+        'current_efficiency': 0.95,
+        'default_thickness_microns': 12.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_deposition',
+        'thickness_role': 'coating_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'zinc': {
+        'label': 'Цинкование',
+        'material_families': ['carbon_steel'],
+        'deposited_material': 'zinc',
+        'deposited_density_kg_dm3': 7.14,
+        'current_density_a_dm2': 2.0,
+        'max_current_a': 1200.0,
+        'electrochemical_equivalent': 1.22,
+        'current_efficiency': 0.95,
+        'default_thickness_microns': 9.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_deposition',
+        'thickness_role': 'coating_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'anodizing': {
+        'label': 'Анодная оксидация',
+        'material_families': ['aluminum'],
+        'deposited_material': 'aluminum_oxide',
+        'deposited_density_kg_dm3': 2.7,
+        'current_density_a_dm2': 2.0,
+        'max_current_a': 1200.0,
+        'electrochemical_equivalent': 0.335,
+        'current_efficiency': 0.7,
+        'default_thickness_microns': 3.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_layer_growth',
+        'thickness_role': 'oxide_layer_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'hard_anodizing': {
+        'label': 'Твёрдая анодная оксидация',
+        'material_families': ['aluminum'],
+        'deposited_material': 'aluminum_oxide',
+        'deposited_density_kg_dm3': 2.7,
+        'current_density_a_dm2': 2.0,
+        'max_current_a': 900.0,
+        'electrochemical_equivalent': 0.335,
+        'current_efficiency': 0.65,
+        'default_thickness_microns': 30.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_layer_growth',
+        'thickness_role': 'oxide_layer_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'chrome': {
+        'label': 'Хромирование',
+        'material_families': ['carbon_steel', 'copper'],
+        'deposited_material': 'chrome',
+        'deposited_density_kg_dm3': 7.19,
+        'current_density_a_dm2': 50.0,
+        'max_current_a': 2500.0,
+        'electrochemical_equivalent': 0.323,
+        'current_efficiency': 0.18,
+        'default_thickness_microns': 9.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_deposition',
+        'thickness_role': 'coating_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'cadmium': {
+        'label': 'Кадмирование',
+        'material_families': ['carbon_steel'],
+        'deposited_material': 'cadmium',
+        'deposited_density_kg_dm3': 8.65,
+        'current_density_a_dm2': 0.5,
+        'max_current_a': 100.0,
+        'electrochemical_equivalent': 2.096,
+        'current_efficiency': 0.9,
+        'default_thickness_microns': 9.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_deposition',
+        'thickness_role': 'coating_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'electropolishing': {
+        'label': 'Электрохимическое полирование',
+        'material_families': ['stainless_steel'],
+        'current_density_a_dm2': 50.0,
+        'max_current_a': 1000.0,
+        'electrochemical_equivalent': 1.042,
+        'current_efficiency': 0.8,
+        'is_electrolytic': True,
+        'removed_material': 'stainless_steel',
+        'removed_material_density_kg_dm3': 7.8,
+        'default_processing_depth_microns': 10.0,
+        'time_model': 'faraday_material_removal',
+        'thickness_role': 'removed_layer_depth',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'copper': {
+        'label': 'Меднение',
+        'material_families': ['carbon_steel'],
+        'deposited_material': 'copper',
+        'deposited_density_kg_dm3': 8.96,
+        'current_density_a_dm2': 1.0,
+        'max_current_a': 150.0,
+        'electrochemical_equivalent': 1.186,
+        'current_efficiency': 0.95,
+        'default_thickness_microns': 12.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_deposition',
+        'thickness_role': 'coating_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'nickel_cadmium': {
+        'label': 'Гальванотермический никель-кадмий',
+        'material_families': ['carbon_steel'],
+        'deposited_material': 'nickel_cadmium',
+        'deposited_density_kg_dm3': 8.0,
+        'current_density_a_dm2': 0.5,
+        'max_current_a': 100.0,
+        'electrochemical_equivalent': 2.096,
+        'current_efficiency': 0.9,
+        'default_thickness_microns': 9.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_deposition',
+        'thickness_role': 'coating_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+        },
+    'silvering': {
+        'label': 'Серебрение',
+        'material_families': [],
+        'deposited_material': 'silver',
+        'deposited_density_kg_dm3': 10.49,
+        'current_density_a_dm2': 0.5,
+        'max_current_a': 150.0,
+        'electrochemical_equivalent': 4.025,
+        'current_efficiency': 0.95,
+        'default_thickness_microns': 9.0,
+        'is_electrolytic': True,
+        'time_model': 'faraday_deposition',
+        'thickness_role': 'coating_thickness',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'chemical_phosphating': {
+        'label': 'Химическое фосфатирование',
+        'material_families': ['carbon_steel'],
+        'default_thickness_microns': 5.0,
+        'is_electrolytic': False,
+        'fixed_operation_time_min': 30.0,
+        'time_model': 'fixed_time',
+        'thickness_role': 'conversion_layer_reference',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'pickling': {
+        'label': 'Травление',
+        'material_families': ['stainless_steel', 'aluminum', 'titanium'],
+        'default_thickness_microns': 0.0,
+        'is_electrolytic': False,
+        'fixed_operation_time_min': 30.0,
+        'time_model': 'fixed_time',
+        'thickness_role': 'not_applicable',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'degreasing': {
+        'label': 'Обезжиривание',
+        'material_families': ['stainless_steel', 'titanium'],
+        'default_thickness_microns': 0.0,
+        'is_electrolytic': False,
+        'fixed_operation_time_min': 30.0,
+        'time_model': 'fixed_time',
+        'thickness_role': 'not_applicable',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'loosening': {
+        'label': 'Рыхление',
+        'material_families': ['stainless_steel', 'titanium'],
+        'default_thickness_microns': 0.0,
+        'is_electrolytic': False,
+        'fixed_operation_time_min': 30.0,
+        'time_model': 'fixed_time',
+        'thickness_role': 'not_applicable',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'chemical_passivation': {
+        'label': 'Химическая пассивация',
+        'material_families': ['stainless_steel', 'copper', 'titanium'],
+        'default_thickness_microns': 0.0,
+        'is_electrolytic': False,
+        'fixed_operation_time_min': 30.0,
+        'time_model': 'fixed_time',
+        'thickness_role': 'not_applicable',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'chemical_oxidation': {
+        'label': 'Химическая оксидация',
+        'material_families': ['aluminum'],
+        'default_thickness_microns': 3.0,
+        'is_electrolytic': False,
+        'fixed_operation_time_min': 30.0,
+        'time_model': 'fixed_time',
+        'thickness_role': 'conversion_layer_reference',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    },
+    'chromating': {
+        'label': 'Хроматирование',
+        'material_families': ['magnesium'],
+        'default_thickness_microns': 3.0,
+        'is_electrolytic': False,
+        'fixed_operation_time_min': 30.0,
+        'time_model': 'fixed_time',
+        'thickness_role': 'conversion_layer_reference',
+        'requires_thickness_input': False,
+        'requires_processing_depth_input': False
+    }
 }
 
 ELECTROPLATING_MATERIAL_FAMILIES: Dict[str, Dict[str, Any]] = {
@@ -581,6 +619,16 @@ ELECTROPLATING_OPERATION_PROFILES: Dict[str, Dict[str, Any]] = {
     "silvering": {"profile_key": "silvering", "material_families": ["copper", "carbon_steel"]},
 }
 
+# Preparation/setup time is selected by the concrete electroplating operation.
+# Values are initialized with the previous project-wide default to preserve
+# current pricing. Change individual values here when технологические нормы are
+# clarified for a concrete operation. A value placed directly in
+# ELECTROPLATING_OPERATION_PROFILES[operation_id]["preparation_time_min"] has
+# priority over this map.
+ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS: Dict[str, float] = {
+    operation["id"]: float(ELECTROPLATING_DEFAULTS["preparation_time_min"])
+    for operation in ELECTROPLATING_OPERATIONS
+}
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -661,10 +709,17 @@ def _operation_binding(operation: Mapping[str, Any]) -> Dict[str, Any]:
     if not material_families:
         raise ValueError(f"Operation {operation_id!r} must define at least one allowed material family")
 
-    return {
-        "profile_key": profile_key,
-        "material_families": material_families,
-    }
+    result = dict(binding)
+    result["profile_key"] = profile_key
+    result["material_families"] = material_families
+    result.setdefault(
+        "preparation_time_min",
+        ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS.get(
+            operation_id,
+            ELECTROPLATING_DEFAULTS["preparation_time_min"],
+        ),
+    )
+    return result
 
 
 def _operation_profile_key(operation: Mapping[str, Any]) -> str:
@@ -683,6 +738,15 @@ def _profile_for_operation(operation: Mapping[str, Any]) -> Dict[str, Any]:
     profile = dict(PROCESS_PROFILE_LIBRARY[profile_key])
     profile["profile_key"] = profile_key
     profile["material_families"] = list(binding["material_families"])
+
+    # Per-operation overrides live in ELECTROPLATING_OPERATION_PROFILES.
+    # This keeps process-specific norms such as preparation_time_min next to the
+    # concrete operation id selected by the frontend.
+    for key, value in binding.items():
+        if key in {"profile_key", "material_families"}:
+            continue
+        profile[key] = value
+
     return profile
 
 
@@ -791,6 +855,51 @@ def get_electroplating_process(process_id: Optional[str]) -> Optional[Dict[str, 
     if canonical_id != normalized:
         result["requested_id"] = normalized
     return result
+
+
+def get_electroplating_material_family(family_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    """Return one configured electroplating material family by id."""
+    normalized = normalize_material_family_id(family_id)
+    if normalized == NOT_APPLICABLE_ELECTROPLATING_FAMILY:
+        return None
+    family = get_material_families().get(normalized)
+    if not family:
+        return None
+    return {"id": normalized, **family}
+
+
+def is_material_family_allowed_for_electroplating_process(
+    family_id: Optional[str],
+    process_id: Optional[str],
+) -> bool:
+    """Return whether an electroplating family is allowed for a concrete operation."""
+    family = get_electroplating_material_family(family_id)
+    process = get_electroplating_process(process_id)
+    if family is None or process is None:
+        return False
+
+    normalized_family_id = str(family["id"])
+    allowed_by_process = {
+        normalize_material_family_id(value)
+        for value in (process.get("material_families") or [])
+    }
+    allowed_by_family = set(family.get("allowed_processes") or [])
+    return (
+        normalized_family_id in allowed_by_process
+        and (not allowed_by_family or process.get("id") in allowed_by_family)
+    )
+
+
+def get_material_families_for_process(process_id: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+    """Return configured electroplating families, optionally filtered by process."""
+    families = get_material_families()
+    if not process_id:
+        return families
+    return {
+        family_id: family
+        for family_id, family in families.items()
+        if is_material_family_allowed_for_electroplating_process(family_id, process_id)
+    }
 
 
 def infer_material_family(material_id: str, material_info: Mapping[str, Any]) -> str:

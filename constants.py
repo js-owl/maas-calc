@@ -30,23 +30,19 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "label": "Алюминий Д16",
         "family": "alum",
         "electroplating_family": "aluminum",
-        "density": 2800.0,
-        "k_handle": 0.03,
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "sheet": {
-                "price": 847.62,
-                "applicable_processes": ["cnc-milling", "painting"],
-            }, 
-            "rod": {
-                "price": 531.08,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
-            }, 
-            "hexagon": {
-                "price": 587.44,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+                "price": 1038.57,
+                "applicable_processes": ["cnc-milling"]
             },
+            "rod": {
+                "price": 793.43,
+                "applicable_processes": ["cnc-milling"]
+            }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 2800.0,
         "material_name": "Д16",
         "material_name_main": "Алюминий",
         "material_coef": 1.0,
@@ -58,22 +54,22 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "relative_coef": 1.0
     },
     "alum_AMC": {
-        "label": "Алюминий АМц", 
-        "family": "alum", 
+        "label": "Алюминий АМц",
+        "family": "alum",
         "electroplating_family": "aluminum",
-        "density": 2800.0, 
-        "k_handle": 0.03,
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "sheet": {
-                "price": 408.22,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
-            }, 
+                "price": 451.16,
+                "applicable_processes": ["cnc-milling"]
+            },
             "rod": {
-                "price": 471.89,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+                "price": 548.88,
+                "applicable_processes": ["cnc-milling"]
             }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 2800.0,
         "material_name": "АМц",
         "material_name_main": "Алюминий",
         "material_coef": 0.8,
@@ -82,29 +78,25 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "hardness": 70,
         "strenghtness": 320,
         "thermal_conductivity": 140,
-        "relative_coef": 1.20
+        "relative_coef": 1.2
     },
     "alum_AMG3": {
-        "label": "Алюминий АМг3", 
-        "family": "alum", 
+        "label": "Алюминий АМг3",
+        "family": "alum",
         "electroplating_family": "aluminum",
-        "density": 2800.0, 
-        "k_handle": 0.03,
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "sheet": {
-                "price": 433.31,
-                "applicable_processes": ["cnc-milling", "painting"],
-            }, 
-            "rod": {
-                "price": 425.75,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
-            }, 
-            "hexagon": {
-                "price": 490.65,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+                "price": 407.3,
+                "applicable_processes": ["cnc-milling"]
             },
+            "rod": {
+                "price": 725.73,
+                "applicable_processes": ["cnc-milling"]
+            }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 2800.0,
         "material_name": "АМг3",
         "material_name_main": "Алюминий",
         "material_coef": 2.5,
@@ -113,29 +105,25 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "hardness": 60,
         "strenghtness": 300,
         "thermal_conductivity": 130,
-        "relative_coef": 1.20
+        "relative_coef": 1.2
     },
     "alum_AMG6": {
-        "label": "Алюминий АМг6", 
-        "family": "alum", 
+        "label": "Алюминий АМг6",
+        "family": "alum",
         "electroplating_family": "aluminum",
-        "density": 2800.0, 
-        "k_handle": 0.03,
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "sheet": {
-                "price": 675.13,
-                "applicable_processes": ["cnc-milling", "painting"],
-            }, 
-            "rod": {
-                "price": 560.12,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
-            }, 
-            "hexagon": {
-                "price": 705.20,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+                "price": 779.76,
+                "applicable_processes": ["cnc-milling"]
             },
+            "rod": {
+                "price": 850.21,
+                "applicable_processes": ["cnc-milling"]
+            }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 2800.0,
         "material_name": "АМг6",
         "material_name_main": "Алюминий",
         "material_coef": 2.5,
@@ -146,23 +134,23 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "thermal_conductivity": 120,
         "relative_coef": 1.15
     },
-    "steel_12X18H10T": {
-        "label": "Сталь 12Х18Н10Т", 
-        "family": "steel", 
+    "steel_0001": {
+        "label": "Сталь 12Х18Н10Т",
+        "family": "steel",
         "electroplating_family": "stainless_steel",
-        "density": 7850.0, 
-        "k_handle": 0.045, 
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "sheet": {
-                "price": 515.80,
-                "applicable_processes": ["cnc-milling", "painting"],
-            }, 
+                "price": 1074.43,
+                "applicable_processes": ["cnc-milling"]
+            },
             "rod": {
-                "price": 340.40,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+                "price": 1178.8,
+                "applicable_processes": ["cnc-milling"]
             }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 7850.0,
         "material_name": "12Х18Н10Т",
         "material_name_main": "Сталь",
         "material_coef": 1.0,
@@ -173,27 +161,27 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "thermal_conductivity": 14,
         "relative_coef": 0.55
     },
-    "steel_30XGSA": {
-        "label": "Сталь 30ХГСА", 
-        "family": "steel", 
+    "steel_0002": {
+        "label": "Сталь 30ХГСА",
+        "family": "steel",
         "electroplating_family": "carbon_steel",
-        "density": 7850.0, 
-        "k_handle": 0.045,
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "sheet": {
-                "price": 263.81,
-                "applicable_processes": ["cnc-milling", "painting"],
-            }, 
-            "rod": {
-                "price": 244.63,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
-            }, 
-            "hexagon": {
-                "price": 244.63,
-                "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+                "price": 359.22,
+                "applicable_processes": ["cnc-milling"]
             },
+            "rod": {
+                "price": 349.07,
+                "applicable_processes": ["cnc-milling"]
+            },
+            "hexagon": {
+                "price": 452.98,
+                "applicable_processes": ["cnc-milling"]
+            }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 7850.0,
         "material_name": "30ХГСА",
         "material_name_main": "Сталь",
         "material_coef": 0.41,
@@ -204,61 +192,23 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "thermal_conductivity": 28,
         "relative_coef": 0.8
     },
-    "PA11": {
-        "label": "Порошок PA11", 
-        "family": "plastic", 
-        "electroplating_family": None,
-        "density": 1020, 
-        "k_handle": 0,
-        "applicable_processes": ["printing", "painting"],
-        "forms": {
-            "powder": {
-                "price": 14000,
-                "applicable_processes": ["printing", "painting"],
-            }
-        },
-        # "material_name": "",
-        # "material_name_main": "",
-        # "material_coef": 0,
-        # "material_group": "",
-        # "material_name_group": ""
-    },
-    "PA12": {
-        "label": "Порошок PA12", 
-        "family": "plastic", 
-        "electroplating_family": None,
-        "density": 930, 
-        "k_handle": 0,
-        "applicable_processes": ["printing", "painting"],
-        "forms": {
-            "powder": {
-                "price": 9200,
-                "applicable_processes": ["printing", "painting"],
-            }
-        },
-        #"material_name": "",
-        #"material_name_main": "",
-        #"material_coef": 0,
-        #"material_group": "",
-        # "material_name_group": ""
-    },
-    "steel_14X17H2": {
-        "label": "Сталь 14Х17Н2", 
-        "family": "steel", 
+    "steel_0003": {
+        "label": "Сталь 14Х17Н2",
+        "family": "steel",
         "electroplating_family": "stainless_steel",
-        "density": 7850.0, 
-        "k_handle": 0.0,
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
-            "sheet": {
-                "price": 2000,
-                "applicable_processes": ["cnc-milling", "painting"],
-            },
             "rod": {
-                "price": 261.92,
-                "applicable_processes": ["cnc-milling", "cnc_lathe"],
+                "price": 1115.32,
+                "applicable_processes": ["cnc-milling"]
+            },
+            "sheet": {
+                "price": 1131.96,
+                "applicable_processes": ["cnc-milling"]
             }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 7850.0,
         "material_name": "14Х17Н2",
         "material_name_main": "Сталь",
         "material_coef": 0.6,
@@ -269,96 +219,23 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "thermal_conductivity": 20,
         "relative_coef": 0.65
     },
-    "alum_1163": {
-        "label": "Алюминий 1163", 
-        "family": "alum", 
+    "alum_0004": {
+        "label": "Алюминий АД1",
+        "family": "alum",
         "electroplating_family": "aluminum",
-        "density": 2800.0, 
-        "k_handle": 0.03,
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "sheet": {
-                "price": 1200,
-                "applicable_processes": ["cnc-milling", "painting"],
-            }
-        },
-        "material_name": "1163",
-        "material_name_main": "Алюминий",
-        "material_coef": 0.91,
-        "material_group": "Цветные",
-        "material_name_group": "Алюминиевый деформируемый сплав",
-        "hardness": 130,
-        "strenghtness": 470,
-        "thermal_conductivity": 155,
-        "relative_coef": 0.95
-    },
-    "alum_B95och": {
-        "label": "Алюминий В95оч", 
-        "family": "alum", 
-        "electroplating_family": "aluminum",
-        "density": 2800.0, 
-        "k_handle": 0.03,
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
-        "forms": {
-            "sheet": {
-                "price": 1300,
-                "applicable_processes": ["cnc-milling", "painting"],
-            }
-        },
-        "material_name": "В95оч",
-        "material_name_main": "Алюминий",
-        "material_coef": 0.83,
-        "material_group": "Цветные",
-        "material_name_group": "Алюминиевый деформируемый сплав",
-        "hardness": 140,
-        "strenghtness": 500,
-        "thermal_conductivity": 150,
-        "relative_coef": 0.9
-    },
-    "alum_ad31": {
-        "label": "Алюминий АД31", 
-        "family": "alum", 
-        "electroplating_family": "aluminum",
-        "density": 2710.0, 
-        "k_handle": 0.0,
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
-        "forms": {
-            "sheet": {
-                "price": 267.09,
-                "applicable_processes": ["cnc-milling", "painting"],
+                "price": 545.62,
+                "applicable_processes": ["cnc-milling"]
             },
             "rod": {
-                "price": 509.17,
-                "applicable_processes": ["cnc-lathe", "cnc-milling", "painting"],
+                "price": 438.66,
+                "applicable_processes": ["cnc-milling"]
             }
         },
-        "material_name": "АД31",
-        "material_name_main": "Алюминий",
-        "material_coef": 0.0,
-        "material_group": "Цветные",
-        "material_name_group": "Алюминиевый деформируемый сплав",
-        "hardness": 80,
-        "strenghtness": 260,
-        "thermal_conductivity": 170,
-        "relative_coef": 1.30
-    },
-    "alum_ad1": {
-        "label": "Алюминий АД1", 
-        "family": "alum", 
-        "electroplating_family": "aluminum",
-        "density": 2710.0, 
-        "k_handle": 0.0,
-        "applicable_processes": ["cnc-milling", "cnc-lathe", "painting"],
-        "forms": {
-            "sheet": {
-                "price": 310.28,
-                "applicable_processes": ["cnc-milling", "painting"],
-            },
-            "rod": {
-                "price": 283.33,
-                "applicable_processes": ["cnc-lathe", "cnc-milling", "painting"],
-            }
-        },
+        "minimum_order_quantity": 10.0,
+        "density": 2710.0,
         "material_name": "АД1",
         "material_name_main": "Алюминий",
         "material_coef": 0.0,
@@ -367,26 +244,26 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "hardness": 35,
         "strenghtness": 150,
         "thermal_conductivity": 220,
-        "relative_coef": 1.30
+        "relative_coef": 1.3
     },
-    "alum_D16T": {
+    "alum_0005": {
         "label": "Алюминий Д16Т",
         "family": "alum",
         "electroplating_family": "aluminum",
-        "density": 2800.0,
-        "k_handle": 0.0,
-        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "sheet": {
-                "price": 465.6,
-                "applicable_processes": ["cnc-milling"],
-            }, 
+                "price": 750.22,
+                "applicable_processes": ["cnc-milling"]
+            },
             "rod": {
-                "price": 545.9,
-                "applicable_processes": ["cnc-milling", "cnc-lathe"],
+                "price": 698.87,
+                "applicable_processes": ["cnc-milling"]
             }
         },
-        "material_name": "Д16",
+        "minimum_order_quantity": 10.0,
+        "density": 2800.0,
+        "material_name": "Д16Т",
         "material_name_main": "Алюминий",
         "material_coef": 0.0,
         "material_group": "Цветные",
@@ -396,19 +273,19 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "thermal_conductivity": 160,
         "relative_coef": 0.9
     },
-    "steel_40Х13": {
-        "label": "Сталь 40Х13", 
-        "family": "steel", 
+    "steel_0006": {
+        "label": "Сталь 40Х13",
+        "family": "steel",
         "electroplating_family": "stainless_steel",
-        "density": 7770.0, 
-        "k_handle": 0.0,
-        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "rod": {
-                "price": 196.89,
-                "applicable_processes": ["cnc-milling", "cnc-lathe"],
+                "price": 286.92,
+                "applicable_processes": ["cnc-milling"]
             }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 7770.0,
         "material_name": "40Х13",
         "material_name_main": "Сталь",
         "material_coef": 0.0,
@@ -419,42 +296,19 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "thermal_conductivity": 25,
         "relative_coef": 0.6
     },
-    "alum_АК4": {
-        "label": "Алюминий АК4", 
-        "family": "alum", 
-        "electroplating_family": "aluminum",
-        "density": 2770.0, 
-        "k_handle": 0.0,
+    "latun_0007": {
+        "label": "Латунь Л63",
+        "family": "latun",
+        "electroplating_family": "copper",
         "applicable_processes": ["cnc-milling"],
         "forms": {
-            "sheet": {
-                "price": 856.53,
-                "applicable_processes": ["cnc-milling"],
-            }, 
-        },
-        "material_name": "АК4",
-        "material_name_main": "Алюминий",
-        "material_coef": 0.8,
-        "material_group": "Цветные",
-        "material_name_group": "Алюминиевый деформируемый сплав",
-        "hardness": 100,
-        "strenghtness": 335,
-        "thermal_conductivity": 150,
-        "relative_coef": 0.85
-    },
-    "latun_Л63": {
-        "label": "Латунь Л63", 
-        "family": "latun", 
-        "electroplating_family": "copper",
-        "density": 8440.0, 
-        "k_handle": 0.0,
-        "applicable_processes": ["cnc-milling", "cnc-lathe"],
-        "forms": {
             "rod": {
-                "price": 428.52,
-                "applicable_processes": ["cnc-milling", "cnc-lathe"],
-            }, 
+                "price": 1300.55,
+                "applicable_processes": ["cnc-milling"]
+            }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 8440.0,
         "material_name": "Л63",
         "material_name_main": "Латунь",
         "material_coef": 0.0,
@@ -465,19 +319,19 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "thermal_conductivity": 120,
         "relative_coef": 0.9
     },
-    "bronze_БрАЖМц10-3-1.5": {
-        "label": "Бронза БрАЖМц10-3-1.5", 
-        "family": "bronze", 
+    "bronze_0008": {
+        "label": "Бронза БрАЖМц10-3-1.5",
+        "family": "bronze",
         "electroplating_family": "copper",
-        "density": 7500.0, 
-        "k_handle": 0.0,
-        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "rod": {
-                "price": 610.21,
-                "applicable_processes": ["cnc-milling", "cnc-lathe"],
-            }, 
+                "price": 1531.42,
+                "applicable_processes": ["cnc-milling"]
+            }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 7500.0,
         "material_name": "БрАЖМц10-3-1.5",
         "material_name_main": "Бронза",
         "material_coef": 0.0,
@@ -488,197 +342,367 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "thermal_conductivity": 60,
         "relative_coef": 0.7
     },
-    "steel_45": {
-        "label": "Сталь 45", 
-        "family": "steel", 
+    "steel_0009": {
+        "label": "Сталь 45",
+        "family": "steel",
         "electroplating_family": "carbon_steel",
-        "density": 7826.0, 
-        "k_handle": 0.0,
-        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "rod": {
-                "price": 63.03,
-                "applicable_processes": ["cnc-milling", "cnc-lathe"],
-            }, 
+                "price": 154.3,
+                "applicable_processes": ["cnc-milling"]
+            }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 7826.0,
         "material_name": "Ст45",
         "material_name_main": "Сталь",
         "material_coef": 0.0,
-        "material_group": "Конструкционная углеродистая качественная",
-        "material_name_group": "Углеродистые и легированные стали",
+        "material_group": "Углеродистые и легированные стали",
+        "material_name_group": "Конструкционная углеродистая качественная",
         "hardness": 200,
         "strenghtness": 750,
         "thermal_conductivity": 45,
         "relative_coef": 0.85
     },
-    "steel_20": {
-        "label": "Сталь 20", 
-        "family": "steel", 
+    "steel_0010": {
+        "label": "Сталь 20",
+        "family": "steel",
         "electroplating_family": "carbon_steel",
-        "density": 7859.0, 
-        "k_handle": 0.0,
-        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+        "applicable_processes": ["cnc-milling"],
         "forms": {
             "sheet": {
-                "price": 68.565,
-                "applicable_processes": ["cnc-milling"],
-            }, 
+                "price": 122.11,
+                "applicable_processes": ["cnc-milling"]
+            },
             "rod": {
-                "price": 55.23,
-                "applicable_processes": ["cnc-milling", "cnc-lathe"],
-            }, 
+                "price": 153.19,
+                "applicable_processes": ["cnc-milling"]
+            }
         },
+        "minimum_order_quantity": 10.0,
+        "density": 7859.0,
         "material_name": "Ст20",
         "material_name_main": "Сталь",
         "material_coef": 0.0,
-        "material_group": "Конструкционная углеродистая качественная",
-        "material_name_group": "Углеродистые и легированные стали",
+        "material_group": "Углеродистые и легированные стали",
+        "material_name_group": "Конструкционная углеродистая качественная",
         "hardness": 130,
         "strenghtness": 450,
         "thermal_conductivity": 48,
         "relative_coef": 0.95
     },
-    "steel_40Х": {
-        "label": "Сталь 40Х", 
-        "family": "steel", 
-        "electroplating_family": "carbon_steel",
-        "density": 7820.0, 
-        "k_handle": 0.0,
-        "applicable_processes": ["cnc-milling", "cnc-lathe"],
+    "polymer_0011": {
+        "label": "ПКМ МКТ-5.25",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
         "forms": {
-            "hexagon": {
-                "price": 74.45,
-                "applicable_processes": ["cnc-milling", "cnc-lathe"],
+            "textile": {
+                "price": 31450.0,
+                "applicable_processes": ["composite"]
             }
         },
-        "material_name": "40Х",
-        "material_name_main": "Сталь",
-        "material_coef": 0.0,
-        "material_group": "Углеродистые и легированные стали",
-        "material_name_group": "Конструкционная легированная",
-        "hardness": 200,
-        "strenghtness": 800,
-        "thermal_conductivity": 45,
-        "relative_coef": 1.25,
-        "minimum_order_quantity": 10 # kg
+        "minimum_order_quantity": 10.0,
+        "material_name": "МКТ-5.25",
+        "material_name_main": "ПКМ",
+        "material_group": "Кремнеземные ткани"
     },
-    "alum_АК7pch": {
-        "label": "Алюминий АК7пч", 
-        "family": "alum", 
-        "electroplating_family": "aluminum",
-        # "density": 2770.0, 
-        # "k_handle": 0.0,
-        "applicable_processes": ["other"],
-        "forms": {
-            "sheet": {
-                # "price": 856.53,
-                "applicable_processes": ["other"],
-            }, 
-        },
-        "material_name": "АК7пч",
-        "material_name_main": "Алюминий",
-        # "material_coef": 0.8,
-        "material_group": "Цветные",
-        # "material_name_group": "Алюминиевый деформируемый сплав",
-        # "hardness": 100,
-        # "strenghtness": 335,
-        # "thermal_conductivity": 150,
-        # "relative_coef": 0.85
-    },
-    "other": {
-        "label": "Другой", 
-        "family": "other", 
-        "electroplating_family": None,
-        "applicable_processes": ["other"],
-        "forms": {
-            "sheet": {
-                "applicable_processes": ["other"],
-            }, 
-        },
-        "material_name": "other",
-        "material_name_main": "other",
-        "material_group": "other",
-
-    },
-    "carbon_22502": {
-        "label": "Ткань углеродная 22502", 
-        "family": "other", 
-        "electroplating_family": None,
-        "applicable_processes": ["composite"],
-        "forms": {
-            "sheet": {
-                "one_layer_thickness": 0.208,
-                "price": 2921.0, # m2
-                "applicable_processes": ["composite"],
-            }, 
-        },
-        "material_name": "Ткань углеродная",
-        "material_name_main": "22502",
-        "material_group": "composite",
-    },
-    "pre-preg_v180": {
-        "label": "Препрег эпоксидный В180", 
-        "family": "pre-preg", 
+    "polymer_0012": {
+        "label": "ПКМ Э1",
+        "family": "polymer",
         "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
-                "one_layer_thickness": 0.2,
-                "price": 4930.0, # m2
-                "applicable_processes": ["composite"],
-            }, 
+                "price": 195.0,
+                "applicable_processes": ["composite"]
+            }
         },
-        "material_name": "Препрег",
-        "material_name_main": "В180",
-        "material_group": "composite",
+        "minimum_order_quantity": 10.0,
+        "material_name": "Э1",
+        "material_name_main": "ПКМ",
+        "material_group": "Стеклянные ткани"
     },
-    "t-10-14": {
-        "label": "Ткань стеклянная Т-10-14", 
-        "family": "glass", 
+    "polymer_0013": {
+        "label": "ПКМ Э3-180",
+        "family": "polymer",
         "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
-                "one_layer_thickness": 0.23,
-                "price": 370.0, # m2
-                "applicable_processes": ["composite"],
-            }, 
+                "price": 125.0,
+                "applicable_processes": ["composite"]
+            }
         },
-        "material_name": "Ткань стеклянная",
-        "material_name_main": "Т-10-14",
-        "material_group": "composite",
+        "minimum_order_quantity": 10.0,
+        "material_name": "Э3-180",
+        "material_name_main": "ПКМ",
+        "material_group": "Стеклянные ткани"
     },
-    "pre-preg_kps-2m": {
-        "label": "Препрег клеевой КПС-2м", 
-        "family": "pre-preg", 
+    "polymer_0014": {
+        "label": "ПКМ ТР-560",
+        "family": "polymer",
         "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
-                "one_layer_thickness": 0.23,
-                "price": 2693.0, # m2
-                "applicable_processes": ["composite"],
-            }, 
+                "price": 90.17,
+                "applicable_processes": ["composite"]
+            }
         },
-        "material_name": "КПС",
-        "material_name_main": "Препрег",
-        "material_group": "composite",
+        "minimum_order_quantity": 10.0,
+        "material_name": "ТР-560",
+        "material_name_main": "ПКМ",
+        "material_group": "Ровинговые стеклянные ткани"
     },
-    "pre-preg_kmks-2m": {
-        "label": "Препрег клеевой КМКС-2м", 
-        "family": "pre-preg", 
+    "polymer_0015": {
+        "label": "ПКМ 21701",
+        "family": "polymer",
         "electroplating_family": None,
         "applicable_processes": ["composite"],
         "forms": {
             "textile": {
-                "one_layer_thickness": 0.23,
-                "price": 2712.0, # m2
-                "applicable_processes": ["composite"],
-            }, 
+                "price": 2848.25,
+                "applicable_processes": ["composite"]
+            },
+            "pre-preg": {
+                "price": 9316.73,
+                "applicable_processes": ["composite"]
+            }
         },
-        "material_name": "КМКС",
-        "material_name_main": "Препрег",
-        "material_group": "composite",
+        "minimum_order_quantity": 10.0,
+        "material_name": "21701",
+        "material_name_main": "ПКМ",
+        "material_group": "Углеродные ткани"
+    },
+    "polymer_0016": {
+        "label": "ПКМ 22502",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "price": 3862.16,
+                "applicable_processes": ["composite"]
+            },
+            "pre-preg": {
+                "price": 8736.0,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "22502",
+        "material_name_main": "ПКМ",
+        "material_group": "Углеродные ткани"
+    },
+    "polymer_0017": {
+        "label": "ПКМ 24252",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "price": 2440.0,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "24252",
+        "material_name_main": "ПКМ",
+        "material_group": "Углеродные ткани"
+    },
+    "polymer_0018": {
+        "label": "ПКМ Т10",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "price": 371.85,
+                "applicable_processes": ["composite"]
+            },
+            "pre-preg": {
+                "price": 2940.0,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "Т10",
+        "material_name_main": "ПКМ",
+        "material_group": "Стеклянные ткани"
+    },
+    "polymer_0019": {
+        "label": "ПКМ Т11",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "price": 154.16,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "Т11",
+        "material_name_main": "ПКМ",
+        "material_group": "Стеклянные ткани"
+    },
+    "polymer_0020": {
+        "label": "ПКМ Т13",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "price": 126.26,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "Т13",
+        "material_name_main": "ПКМ",
+        "material_group": "Стеклянные ткани"
+    },
+    "polymer_0021": {
+        "label": "ПКМ Т15",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "price": 325.0,
+                "applicable_processes": ["composite"]
+            },
+            "pre-preg": {
+                "price": 3240.0,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "Т15",
+        "material_name_main": "ПКМ",
+        "material_group": "Стеклянные ткани"
+    },
+    "polymer_0022": {
+        "label": "ПКМ Т23",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "price": 166.67,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "Т23",
+        "material_name_main": "ПКМ",
+        "material_group": "Стеклянные ткани"
+    },
+    "polymer_0023": {
+        "label": "ПКМ Т64",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "price": 1070.0,
+                "applicable_processes": ["composite"]
+            },
+            "pre-preg": {
+                "price": 4145.0,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "Т64",
+        "material_name_main": "ПКМ",
+        "material_group": "Стеклянные ткани"
+    },
+    "polymer_0024": {
+        "label": "ПКМ ТС-8/3-К",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "price": 10485.93,
+                "applicable_processes": ["composite"]
+            },
+            "pre-preg": {
+                "price": 17022.0,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "ТС-8/3-К",
+        "material_name_main": "ПКМ",
+        "material_group": "Кварцевые ткани"
+    },
+    "polymer_0025": {
+        "label": "ПКМ КТ11",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "textile": {
+                "price": 1410.0,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "КТ11",
+        "material_name_main": "ПКМ",
+        "material_group": "Кремнеземные ткани"
+    },
+    "polymer_0026": {
+        "label": "ПКМ 10270",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "pre-preg": {
+                "price": 16080.0,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "10270",
+        "material_name_main": "ПКМ",
+        "material_group": "Углеродные ткани"
+    },
+    "polymer_0027": {
+        "label": "ПКМ 10524",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "pre-preg": {
+                "price": 14428.0,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "10524",
+        "material_name_main": "ПКМ",
+        "material_group": "Углеродные ткани"
+    },
+    "polymer_0028": {
+        "label": "ПКМ Т25",
+        "family": "polymer",
+        "electroplating_family": None,
+        "applicable_processes": ["composite"],
+        "forms": {
+            "pre-preg": {
+                "price": 5144.0,
+                "applicable_processes": ["composite"]
+            }
+        },
+        "minimum_order_quantity": 10.0,
+        "material_name": "Т25",
+        "material_name_main": "ПКМ",
+        "material_group": "Стеклянные ткани"
     }
 }
 

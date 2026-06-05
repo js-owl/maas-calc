@@ -54,6 +54,14 @@ class UnifiedCalculationRequest(BaseModel):
         None,
         description="Galvanic process ID for service_id='electroplating_auto'. If omitted, first cover_id is used."
     )
+    electroplating_family: Optional[str] = Field(
+        None,
+        description=(
+            "Material family ID for service_id='electroplating_auto' "
+            "(for example: carbon_steel, stainless_steel, aluminum, copper, titanium). "
+            "This is preferred over material_id for electroplating pricing."
+        )
+    )
     coating_thickness_microns: Optional[float] = Field(
         None,
         ge=0,
