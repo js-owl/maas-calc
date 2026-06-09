@@ -268,11 +268,15 @@ def calculate_bath_layout(
     requested_total_weight_kg = requested_quantity * part_weight_kg
     batch_weight_kg = batch_quantity * part_weight_kg
 
+    # Only active constraints should be reported as limiting factors.
+    # For non-electrolytic processes current_capacity is set equal to
+    # geometric_capacity as a neutral value, but current is not a real limit.
     capacity_candidates = {
         "geometry": geometric_capacity,
-        "current": current_capacity,
         "weight": weight_capacity,
     }
+    if process.get("is_electrolytic", False):
+        capacity_candidates["current"] = current_capacity
     capacity_limiting_factors = [
         factor for factor, capacity in capacity_candidates.items() if capacity == batch_capacity
     ]
@@ -342,8 +346,8 @@ def calculate_process_time_minutes(
             process.get("fixed_operation_time_min"),
             _safe_float(process.get("base_operation_time_min"), 0.0),
         )
-        if fixed_time <= 0:
-            raise ValueError(f"fixed_operation_time_min is not configured for process {process.get('id')!r}")
+        if fixed_time < 0:
+            raise ValueError(f"fixed_operation_time_min must be >= 0 for process {process.get('id')!r}")
         reference_thickness = _safe_float(process.get("default_thickness_microns"), 0.0)
         return {
             "time_model": time_model,
@@ -434,15 +438,41 @@ def calculate_electroplating_labor_hours(
     operation_time_min: float,
     batch_quantity: int,
     workers_count: int,
+    requested_quantity: Optional[int] = None,
+    batch_count: Optional[int] = None,
 ) -> Dict[str, float]:
-    """Calculate labor per one detail using one-bath load as formula n."""
+    """Calculate labor per one detail with one-bath batch splitting.
+
+    The operation-time component ``1.18 * x`` is paid once for every bath load.
+    For a single-batch order this is equivalent to the original formula
+    ``(1.18 * x) / n + z * k`` where ``n`` is the number of parts in the bath.
+
+    For multi-batch orders it is important to account for the extra bath loads:
+    11 parts with a one-bath capacity of 10 should use two operation cycles, not
+    the same cycle divided by 10. Therefore the per-detail operation component is
+    ``(1.18 * x * batch_count) / requested_quantity``.
+    """
     defaults = get_defaults()
     mount_time_min = _safe_float(defaults.get("mount_unmount_time_min"), 2.5)
     batch_quantity = _safe_int(batch_quantity)
-    labor_min = (1.18 * operation_time_min) / batch_quantity + workers_count * mount_time_min
+    requested_quantity = _safe_int(requested_quantity, batch_quantity)
+    batch_count = _safe_int(batch_count, 1)
+
+    effective_n = requested_quantity / batch_count
+    operation_labor_total_min = 1.18 * operation_time_min * batch_count
+    mount_unmount_total_min = workers_count * mount_time_min * requested_quantity
+    labor_min = operation_labor_total_min / requested_quantity + workers_count * mount_time_min
+    order_labor_time_min = operation_labor_total_min + mount_unmount_total_min
     return {
         "mount_unmount_time_min": mount_time_min,
         "labor_formula_batch_quantity_n": float(batch_quantity),
+        "labor_formula_requested_quantity": float(requested_quantity),
+        "labor_formula_batch_count": float(batch_count),
+        "labor_formula_effective_n": float(effective_n),
+        "operation_labor_total_min": operation_labor_total_min,
+        "mount_unmount_total_min": mount_unmount_total_min,
+        "order_labor_time_min": order_labor_time_min,
+        "order_labor_time_hours": order_labor_time_min / 60.0,
         "labor_time_min": labor_min,
         "labor_time_hours": labor_min / 60.0,
     }
@@ -498,6 +528,8 @@ def calculate_electroplating_parameters(
         operation_time_min=operation_time_min,
         batch_quantity=layout["batch_quantity"],
         workers_count=workers_count,
+        requested_quantity=layout["requested_quantity"],
+        batch_count=layout["batch_count"],
     )
 
     return {

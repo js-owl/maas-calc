@@ -10,6 +10,8 @@ services:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=WARNING
       - ENVIRONMENT=production
+      - PYOPENGL_PLATFORM=osmesa
+      - LIBGL_ALWAYS_SOFTWARE="1"
     volumes:
       - ./logs:/app/logs
       - ./uploads:/app/uploads

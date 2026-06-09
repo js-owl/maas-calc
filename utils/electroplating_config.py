@@ -281,7 +281,7 @@ PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
         'max_current_a': 150.0,
         'electrochemical_equivalent': 1.095,
         'current_efficiency': 0.95,
-        'default_thickness_microns': 12.0,
+        'default_thickness_microns': 9.0,
         'is_electrolytic': True,
         'time_model': 'faraday_deposition',
         'thickness_role': 'coating_thickness',
@@ -297,7 +297,7 @@ PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
         'max_current_a': 150.0,
         'electrochemical_equivalent': 1.095,
         'current_efficiency': 0.95,
-        'default_thickness_microns': 12.0,
+        'default_thickness_microns': 9.0,
         'is_electrolytic': True,
         'time_model': 'faraday_deposition',
         'thickness_role': 'coating_thickness',
@@ -409,7 +409,7 @@ PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
         'max_current_a': 150.0,
         'electrochemical_equivalent': 1.186,
         'current_efficiency': 0.95,
-        'default_thickness_microns': 12.0,
+        'default_thickness_microns': 9.0,
         'is_electrolytic': True,
         'time_model': 'faraday_deposition',
         'thickness_role': 'coating_thickness',
@@ -453,7 +453,7 @@ PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
         'material_families': ['carbon_steel'],
         'default_thickness_microns': 5.0,
         'is_electrolytic': False,
-        'fixed_operation_time_min': 30.0,
+        'fixed_operation_time_min': 25.0,
         'time_model': 'fixed_time',
         'thickness_role': 'conversion_layer_reference',
         'requires_thickness_input': False,
@@ -464,7 +464,7 @@ PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
         'material_families': ['stainless_steel', 'aluminum', 'titanium'],
         'default_thickness_microns': 0.0,
         'is_electrolytic': False,
-        'fixed_operation_time_min': 30.0,
+        'fixed_operation_time_min': 0.0,
         'time_model': 'fixed_time',
         'thickness_role': 'not_applicable',
         'requires_thickness_input': False,
@@ -475,7 +475,7 @@ PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
         'material_families': ['stainless_steel', 'titanium'],
         'default_thickness_microns': 0.0,
         'is_electrolytic': False,
-        'fixed_operation_time_min': 30.0,
+        'fixed_operation_time_min': 0.0,
         'time_model': 'fixed_time',
         'thickness_role': 'not_applicable',
         'requires_thickness_input': False,
@@ -486,7 +486,7 @@ PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
         'material_families': ['stainless_steel', 'titanium'],
         'default_thickness_microns': 0.0,
         'is_electrolytic': False,
-        'fixed_operation_time_min': 30.0,
+        'fixed_operation_time_min': 0.0,
         'time_model': 'fixed_time',
         'thickness_role': 'not_applicable',
         'requires_thickness_input': False,
@@ -497,7 +497,7 @@ PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
         'material_families': ['stainless_steel', 'copper', 'titanium'],
         'default_thickness_microns': 0.0,
         'is_electrolytic': False,
-        'fixed_operation_time_min': 30.0,
+        'fixed_operation_time_min': 0.0,
         'time_model': 'fixed_time',
         'thickness_role': 'not_applicable',
         'requires_thickness_input': False,
@@ -508,7 +508,7 @@ PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
         'material_families': ['aluminum'],
         'default_thickness_microns': 3.0,
         'is_electrolytic': False,
-        'fixed_operation_time_min': 30.0,
+        'fixed_operation_time_min': 840.0,
         'time_model': 'fixed_time',
         'thickness_role': 'conversion_layer_reference',
         'requires_thickness_input': False,
@@ -631,26 +631,93 @@ ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS: Dict[str, float] = {
 }
 ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS.update({
     "tin_bismuth": 32.13,
-    "titanium_etching": 32.62,
-    "steel_phosphating_zinc": 36.2,
-    "steel_phosphating_oxide": 36.2,
-    "corrosion_resistant_steel_degreasing": 30.6,
-    "corrosion_resistant_steel_loosening": 30.6,
-    "corrosion_resistant_steel_etching": 30.6,
-    "corrosion_resistant_steel_passivation": 30.6,
     "galvanization_zinc_phosphating": 45.95,
     "galvanization_zinc_chromating": 45.95,
+
+    # Fixed-time chemical/conversion/anodizing operations from shop norms.
+    # For these operations coating_thickness_microns must not affect operative time.
+    "aluminum_weld_etching": 27.14,
+    "aluminum_chemical_oxidation": 32.8,
+    "aluminum_anodizing_water": 40.79,
+    "aluminum_anodizing_chrome": 40.79,
+    "aluminum_anodizing_organic_black": 40.79,
+    "corrosion_resistant_steel_degreasing": 20.6,
+    "corrosion_resistant_steel_loosening": 30.6,
+    "corrosion_resistant_steel_etching": 30.6,
+    "corrosion_resistant_steel_passivation": 20.6,
     "titanium_degreasing": 25.5,
     "titanium_loosening": 25.5,
     "titanium_etching": 25.5,
     "titanium_passivation": 25.5,
-    "aluminum_weld_etching": 27.14,
-    "aluminum_anodizing_strong": 40.79,
-    "aluminum_anodizing_water": 40.79,
-    "aluminum_anodizing_chrome": 40.79,
-    "aluminum_anodizing_organic_black": 40.79,
-    "aluminum_chemical_oxidation": 32.8
+    "steel_phosphating_zinc": 36.2,
+    "steel_phosphating_oxide": 36.2,
 })
+
+# Operative times for operations that are treated as norm-based fixed-time
+# processes. These values are the process-time component only; preparation/setup
+# time is kept separately in ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS.
+ELECTROPLATING_FIXED_OPERATION_TIME_MIN_BY_PROCESS: Dict[str, float] = {
+    "aluminum_weld_etching": 0.0,
+    "aluminum_chemical_oxidation": 14.0,
+    "aluminum_anodizing_water": 35.0,
+    "aluminum_anodizing_chrome": 57.5,
+    "aluminum_anodizing_organic_black": 35.0,
+    "corrosion_resistant_steel_degreasing": 0.0,
+    "corrosion_resistant_steel_loosening": 270.0,
+    "corrosion_resistant_steel_etching": 25.0,
+    "corrosion_resistant_steel_passivation": 22.5,
+    "titanium_degreasing": 20.0,
+    "titanium_loosening": 120.0,
+    "titanium_etching": 15.0,
+    "titanium_passivation": 10.0,
+    "steel_phosphating_zinc": 25.0,
+    "steel_phosphating_oxide": 25.0,
+}
+
+
+
+def _optional_bool(value: Any) -> Optional[bool]:
+    """Return bool for explicit boolean-like config values, otherwise None."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "y", "да"}:
+            return True
+        if normalized in {"false", "0", "no", "n", "нет"}:
+            return False
+    return None
+
+
+def _default_requires_thickness_input(profile: Mapping[str, Any]) -> bool:
+    """Return whether frontend should ask for coating/layer thickness.
+
+    Only processes whose operative time depends on a coating or oxide-layer
+    thickness require coating_thickness_microns from the user. Norm-based
+    fixed-time operations and electropolishing do not use coating thickness.
+    """
+    time_model = str(profile.get("time_model") or "").strip()
+    thickness_role = str(profile.get("thickness_role") or "").strip()
+    return (
+        time_model in {"faraday_deposition", "faraday_layer_growth"}
+        and thickness_role in {"coating_thickness", "oxide_layer_thickness"}
+    )
+
+
+def _default_requires_processing_depth_input(profile: Mapping[str, Any]) -> bool:
+    """Return whether frontend should ask for material-removal depth.
+
+    This is separate from coating thickness and is intended for
+    electropolishing-like operations.
+    """
+    return (
+        str(profile.get("time_model") or "").strip() == "faraday_material_removal"
+        and str(profile.get("thickness_role") or "").strip() == "removed_layer_depth"
+    )
 
 def _as_list(value: Any) -> list[Any]:
     if value is None:
@@ -740,6 +807,15 @@ def _operation_binding(operation: Mapping[str, Any]) -> Dict[str, Any]:
             ELECTROPLATING_DEFAULTS["preparation_time_min"],
         ),
     )
+
+    if operation_id in ELECTROPLATING_FIXED_OPERATION_TIME_MIN_BY_PROCESS:
+        result.setdefault("time_model", "fixed_time")
+        result.setdefault("fixed_operation_time_min", ELECTROPLATING_FIXED_OPERATION_TIME_MIN_BY_PROCESS[operation_id])
+        result.setdefault("thickness_role", "not_applicable")
+        result.setdefault("default_thickness_microns", 0.0)
+        result.setdefault("requires_thickness_input", False)
+        result.setdefault("requires_processing_depth_input", False)
+
     return result
 
 
@@ -763,10 +839,27 @@ def _profile_for_operation(operation: Mapping[str, Any]) -> Dict[str, Any]:
     # Per-operation overrides live in ELECTROPLATING_OPERATION_PROFILES.
     # This keeps process-specific norms such as preparation_time_min next to the
     # concrete operation id selected by the frontend.
+    explicit_requires_thickness = _optional_bool(binding.get("requires_thickness_input"))
+    explicit_requires_processing_depth = _optional_bool(binding.get("requires_processing_depth_input"))
+
     for key, value in binding.items():
         if key in {"profile_key", "material_families"}:
             continue
         profile[key] = value
+
+    # The frontend selector flag must reflect the final concrete operation, not
+    # generic profile defaults. Therefore we derive it after operation-level
+    # overrides such as fixed_time have been applied.
+    profile["requires_thickness_input"] = (
+        explicit_requires_thickness
+        if explicit_requires_thickness is not None
+        else _default_requires_thickness_input(profile)
+    )
+    profile["requires_processing_depth_input"] = (
+        explicit_requires_processing_depth
+        if explicit_requires_processing_depth is not None
+        else _default_requires_processing_depth_input(profile)
+    )
 
     return profile
 

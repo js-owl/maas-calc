@@ -22,8 +22,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     gettext-base \
-    libgl1-mesa-dev \
+    libgl1 \
+    libglx0 \
+    libegl1 \
     libglib2.0-0 \
+    libsm6 \
     libxrender1 \
     libxext6 \
     libx11-6 \
@@ -76,7 +79,9 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYOPENGL_PLATFORM=osmesa \
+    LIBGL_ALWAYS_SOFTWARE=1
 
 # Set build metadata as environment variables
 ENV GIT_TAG=${GIT_TAG} \
@@ -94,7 +99,10 @@ RUN if [ -n "$APT_PROXY" ]; then \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     libgl1 \
+    libglx0 \
+    libegl1 \
     libglib2.0-0 \
+    libsm6 \
     libxrender1 \
     libxext6 \
     libx11-6 \

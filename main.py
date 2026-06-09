@@ -636,6 +636,8 @@ async def list_operations_available(service_id: str):
                     "max_weight_kg": op["max_weight_kg"],
                     "material_families": op.get("material_families", []),
                     "profile_key": op.get("profile_key"),
+                    "requires_thickness_input": bool(op.get("requires_thickness_input", False)),
+                    "requires_processing_depth_input": bool(op.get("requires_processing_depth_input", False)),
                 }
                 for op in operations
             ]
