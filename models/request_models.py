@@ -29,13 +29,8 @@ class UnifiedCalculationRequest(BaseModel):
     k_cert: Optional[List[str]] = Field(None, description="Override certification types")
 
     # Manufacturing-specific parameters
-    k_type: Optional[float] = Field(None, ge=0, le=2, description="Type coefficient")
-    k_process: Optional[float] = Field(None, ge=0, le=2, description="Process coefficient")
     k_otk: Optional[float] = Field(None, ge=0, le=2, description="Quality control coefficient")
     
-    # CNC-specific parameters
-    cnc_complexity: Optional[str] = Field(None, description="CNC complexity level")
-    cnc_setup_time: Optional[float] = Field(None, description="CNC setup time override")
     
     # Location and features
     location: Optional[str] = Field(None, description="Location of manufacture")
@@ -71,5 +66,12 @@ class UnifiedCalculationRequest(BaseModel):
         None,
         ge=0,
         description="Material removal depth in microns for electropolishing/material-removal processes"
+    )
+    material_snapshot: Optional[Dict[str, Any]] = Field(
+        None,
+        description=(
+            "Optional material catalog entry from backend materials sync. "
+            "When present, overrides constants.MATERIALS for this request."
+        ),
     )
     

@@ -131,9 +131,8 @@ def test_file_upload_with_3d_printing():
             'file_name': 'test_cube.stl',
             'file_type': 'stl',
             'quantity': 3,
-            'material_id': 'PA11',
-            'material_form': 'powder',
-            'k_type': 1.0,
+            'material_id': 'plastic_ABS',
+            'material_form': 'thread',
             'k_process': 1.0,
             'cover_id': ['1'],
             'k_cert': []
@@ -190,7 +189,7 @@ def test_file_upload_with_cnc_milling():
             'file_name': 'test_cube.stl',
             'file_type': 'stl',
             'quantity': 5,
-            'material_id': 'alum_D16',
+            'material_id': 'non_ferrous_Д16',
             'material_form': 'sheet',
             'cover_id': ['1'],
             'k_cert': ['a']

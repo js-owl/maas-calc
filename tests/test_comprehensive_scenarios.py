@@ -109,7 +109,7 @@ def test_stp_ml_scenarios():
             "file_name": "S8000_125_63_293_001_D000_02.stp",
             "file_type": "stp",
             "quantity": 1,
-            "material_id": "alum_D16",
+            "material_id": "non_ferrous_Д16",
             "material_form": "sheet",
             "cover_id": ["1"],
             "tolerance_id": "1",
@@ -147,11 +147,9 @@ def test_rule_based_scenarios():
                 "height": 10.0
             },
             "quantity": 1,
-            "material_id": "PA11",
-            "material_form": "powder",
+            "material_id": "plastic_ABS",
+            "material_form": "thread",
             "cover_id": ["1"],
-            "k_type": 1.0,
-            "k_process": 1.0
         }, "rule_based")
     ]
     

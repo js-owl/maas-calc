@@ -1,124 +1,117 @@
 """
-Parameter safeguard system
+Parameter safeguard system.
+
+Only two non-price-critical compatibility defaults are applied here:
+- material_form: when material_id is present but material_form is absent;
+- location: when location is absent.
+
+All other price-critical parameters must be provided by the request or extracted
+from the file. This avoids silent price changes caused by hidden defaults.
 """
 
 import logging
 from typing import Dict, Any, Optional
-from models.base_models import Dimensions, MaterialForm
-from constants import DEFAULTS
-from utils.electroplating_config import ELECTROPLATING_SERVICE_ID, get_defaults
+
+from constants import DEFAULTS, PRINTING_LOCATION
+from MATERIALS_gen import MATERIALS
+from models.base_models import Dimensions
+from utils.electroplating_config import ELECTROPLATING_SERVICE_ID
+from calculations.core import resolve_priced_material_form
 
 logger = logging.getLogger(__name__)
 
 
 class SafeguardManager:
-    """Manages parameter safeguards and default values"""
-    
+    """Applies narrow compatibility safeguards for request parameters."""
+
     def __init__(self):
-        self.defaults = {
-            "printing": {
-                "dimensions": Dimensions(length=100.0, width=50.0, height=10.0),
-                "quantity": 1,
-                "material_id": "PA11",
-                "material_form": MaterialForm.POWDER,
-                "cover_id": DEFAULTS["cover_id_list"],
-                "location": DEFAULTS["location"],
-                "k_type": DEFAULTS["k_type"],
-                "k_process": DEFAULTS["k_process"],
-                "k_otk": DEFAULTS["k_otk"],
-                "k_cert": []
-            },
-            "cnc-milling": {
-                "dimensions": Dimensions(length=100.0, width=50.0, height=10.0),
-                "quantity": 1,
-                "material_id": "alum_D16",
-                "material_form": MaterialForm.SHEET,
-                "cover_id": DEFAULTS["cover_id_list"],
-                "tolerance_id": DEFAULTS["tolerance_id"],
-                "finish_id": DEFAULTS["finish_id"],
-                "location": DEFAULTS["location"],
-                "k_otk": DEFAULTS["k_otk"],
-                "cnc_complexity": DEFAULTS["cnc_complexity"],
-                "cnc_setup_time": DEFAULTS["cnc_setup_time"]
-            },
-            "composite": {
-                "quantity": 1,
-                "material_id": "carbon_22502",
-                "material_form": MaterialForm.TEXTILE,
-                "cover_id": DEFAULTS["cover_id_list"],
-                "location": DEFAULTS["location"],
-                "k_otk": DEFAULTS["k_otk"]
-            },
-            ELECTROPLATING_SERVICE_ID: {
-                "quantity": 1,
-                "cover_id": [get_defaults()["process_id"]],
-                "electroplating_process_id": get_defaults()["process_id"],
-                "coating_thickness_microns": get_defaults()["coating_thickness_microns"],
-                "processing_depth_microns": get_defaults().get("processing_depth_microns"),
-                "location": DEFAULTS["location"],
-                "k_otk": DEFAULTS["k_otk"]
-            }
-        }
-    
+        self.location_default = DEFAULTS["location"]
+
     def apply_safeguards(self, service_id: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Apply safeguards to parameters for the given service
-        
-        Args:
-            service_id: Manufacturing service ID
-            parameters: Current parameters
-            
-        Returns:
-            Parameters with safeguards applied
-        """
-        logger.info(f"Applying parameter safeguards for service: {service_id}")
-        
-        # Get defaults for this service
-        defaults = self.defaults.get(service_id, {})
-        if not defaults:
-            logger.warning(f"No defaults found for service: {service_id}")
-            return parameters
-        
-        # Apply safeguards
+        """Apply only material_form and location safeguards."""
+        logger.info("Applying parameter safeguards for service: %s", service_id)
         safeguarded = parameters.copy()
-        warnings = []
-        
-        for key, default_value in defaults.items():
-            if key not in safeguarded or safeguarded[key] is None:
-                safeguarded[key] = default_value
-                warnings.append(f"Using default {key}: {default_value}")
-                logger.warning(f"Using default {key}: {default_value}")
-        
-        # Special handling for dimensions when the selected service uses a dimensions fallback.
-        if "dimensions" in defaults and ("dimensions" not in safeguarded or safeguarded["dimensions"] is None):
-            safeguarded["dimensions"] = defaults["dimensions"]
-            logger.warning(f"Using default dimensions: {defaults['dimensions']}")
-        
-        # Special handling for material_form validation
-        if "material_id" in safeguarded and "material_form" in safeguarded:
-            safeguard_form = self._validate_material_form(safeguarded["material_id"], safeguarded["material_form"])
+
+        if safeguarded.get("location") is None:
+            location_default = PRINTING_LOCATION if service_id == "printing" else self.location_default
+            safeguarded["location"] = location_default
+            logger.warning("Using default location: %s", location_default)
+
+        if safeguarded.get("material_form") is None and safeguarded.get("material_id"):
+            default_form = self._default_material_form(
+                safeguarded["material_id"],
+                service_id=service_id,
+            )
+            if default_form is not None:
+                safeguarded["material_form"] = default_form
+                logger.warning(
+                    "Using default material_form for %s: %s",
+                    safeguarded["material_id"],
+                    default_form,
+                )
+
+        if safeguarded.get("material_id") and safeguarded.get("material_form"):
+            safeguard_form = self._validate_material_form(
+                safeguarded["material_id"],
+                safeguarded["material_form"],
+                service_id=service_id,
+            )
             if safeguard_form:
                 safeguarded["material_form"] = safeguard_form
-        logger.info(f"Safeguarded material form: {safeguarded.get('material_form')}")
 
+        logger.info("Safeguarded material form: %s", safeguarded.get("material_form"))
         return safeguarded
-    
-    def _validate_material_form(self, material_id: str, material_form: MaterialForm) -> None:
-        """Validate material form against material ID"""
+
+    def _default_material_form(self, material_id: str, service_id: str = "") -> Optional[str]:
+        """Return the first material form applicable to the service, if any."""
+        material = MATERIALS.get(material_id) or {}
+        forms = material.get("forms") or {}
+        if not forms:
+            return None
+
+        if service_id == ELECTROPLATING_SERVICE_ID:
+            return next(iter(forms.keys()), None)
+
+        resolved_form = resolve_priced_material_form(material_id, None, service_id)
+        if resolved_form is not None:
+            return resolved_form
+        return next(iter(forms.keys()), None)
+
+    def _validate_material_form(
+        self,
+        material_id: str,
+        material_form: str,
+        service_id: str = "",
+    ) -> Optional[str]:
+        """Replace an invalid material form with the first valid form for this material."""
         try:
-            from constants import MATERIALS
-            if material_id in MATERIALS:
-                allowed_forms = list(MATERIALS[material_id].get("forms", []).keys())
-                if material_form not in allowed_forms:
-                    logger.warning(f"Form '{material_form}' not allowed for {material_id}. Using first allowed form.")
-                    # Use first allowed form as fallback
-                    if allowed_forms:
-                        safeguard_form = allowed_forms[0]
-                        return safeguard_form
+            material = MATERIALS.get(material_id) or {}
+            forms = material.get("forms") or {}
+            allowed_forms = list(forms.keys())
+            resolved_form = resolve_priced_material_form(material_id, material_form, service_id)
+            if resolved_form and resolved_form != material_form:
+                logger.warning(
+                    "Form %r is not priced/allowed for %s and service %s. Using %r.",
+                    material_form,
+                    material_id,
+                    service_id,
+                    resolved_form,
+                )
+                return resolved_form
+            if allowed_forms and material_form not in allowed_forms:
+                logger.warning(
+                    "Form %r is not allowed for %s. Using first allowed form.",
+                    material_form,
+                    material_id,
+                )
+                return self._default_material_form(material_id, service_id) or allowed_forms[0]
         except Exception as e:
-            logger.warning(f"Error validating material form: {e}")
-    
+            logger.warning("Error validating material form: %s", e)
+        return None
+
     def get_default_dimensions(self, service_id: str) -> Dimensions:
-        """Get default dimensions for service"""
-        defaults = self.defaults.get(service_id, {})
-        return defaults.get("dimensions", Dimensions(length=100.0, width=50.0, height=10.0))
+        """Legacy helper kept for compatibility; dimensions are no longer auto-filled."""
+        raise ValueError(
+            f"Default dimensions are not available for service_id={service_id!r}. "
+            "Pass dimensions explicitly or provide file_data for extraction."
+        )

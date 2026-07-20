@@ -7,8 +7,7 @@ Active production routes:
 - cnc-milling: ML-only calculation;
 - composite: ML calculation.
 
-Removed/deprecated routes are rejected explicitly instead of falling back to old
-logic.
+Unsupported routes are rejected explicitly instead of using non-active calculation logic.
 """
 
 import logging
@@ -16,7 +15,7 @@ from typing import Any, Dict
 
 from calculators import ElectroplatingAutoCalculator, PrintingCalculator
 from calculators.ml_calculator import MLCNCMillingCalculator, MLCompositeCalculator
-from constants import ENABLE_ML_MODELS
+from constants import ENABLE_ML_MODELS, DEFAULTS, PRINTING_LOCATION
 from models.calculation_models import ElectroplatingCalculationRequest, PrintingCalculationRequest
 from models.response_models import UnifiedCalculationResponse
 from utils.composite_ml_predictor import composite_ml_predictor
@@ -90,7 +89,7 @@ class CalculationRouter:
         Determine if ML calculation should be used.
 
         CNC milling is ML-only. Missing model assets or extracted features are a
-        hard calculation error, not a reason to fall back to removed rule-based CNC.
+        hard calculation error, not a reason to switch calculation strategy.
         """
         service_id = parameters.get("service_id", None)
 
@@ -122,7 +121,7 @@ class CalculationRouter:
                 raise ValueError(
                     "Cannot calculate service_id='cnc-milling': "
                     + "; ".join(missing_reasons)
-                    + ". Rule-based CNC milling fallback was removed."
+                    + ". CNC milling is ML-only in the current runtime."
                 )
             return True
 
@@ -212,13 +211,11 @@ class CalculationRouter:
                 dimensions=dimensions,
                 material_id=parameters["material_id"],
                 material_form=parameters["material_form"],
-                quantity=parameters["quantity"],
-                cover_id=parameters["cover_id"],
-                location=parameters["location"],
-                k_type=parameters["k_type"],
-                k_process=parameters["k_process"],
-                k_otk=parameters["k_otk"],
-                k_cert=parameters["k_cert"],
+                quantity=parameters.get("quantity", 1),
+                cover_id=parameters.get("cover_id", DEFAULTS["cover_id_list"]),
+                location=PRINTING_LOCATION,
+                k_otk=parameters.get("k_otk", DEFAULTS["k_otk"]),
+                k_cert=parameters.get("k_cert", DEFAULTS["k_cert_printing"]),
                 service_id=service_id,
             )
 

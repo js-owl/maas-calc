@@ -29,6 +29,7 @@ lightgbm
 
 # Utilities
 requests
+prometheus-client==0.21.1
 #openpyxl NOT USE
 
 # PREVIEWS

@@ -1,5 +1,15 @@
+import pytest
+
+import calculations.electroplating as ep
 from calculations.electroplating import calculate_electroplating_parameters
+import utils.electroplating_config as ec
 from utils.electroplating_config import ELECTROPLATING_OPERATIONS, get_process_params
+
+
+@pytest.fixture(autouse=True)
+def _stable_bath_layout_defaults(monkeypatch):
+    """Keep process-time tests independent from bath-layout tuning constants."""
+    monkeypatch.setattr(ep, "get_defaults", lambda: {"clearance_mm": 0.0, "mount_unmount_time_min": 0.0})
 
 
 FEATURES_SMALL = {
@@ -65,7 +75,7 @@ def test_electropolishing_uses_removal_depth_not_coating_thickness():
     assert params["process_parameter_microns"] == 12.0
 
 
-def test_fixed_time_processes_do_not_depend_on_coating_thickness():
+def test_fixed_time_processes_do_not_depend_on_coating_thickness_by_default():
     params_default = calculate_electroplating_parameters(
         features=FEATURES_SMALL,
         material_id="test_aluminum",
@@ -90,26 +100,13 @@ def test_fixed_time_processes_do_not_depend_on_coating_thickness():
     assert params_default["coating_time_min"] == params_with_thickness["coating_time_min"]
 
 
-def test_norm_based_operations_match_configured_preparation_and_operation_times():
-    expected = {
-        "aluminum_weld_etching": ("aluminum", 27.14, 0.0),
-        "aluminum_chemical_oxidation": ("aluminum", 32.8, 14.0),
-        "aluminum_anodizing_water": ("aluminum", 40.79, 35.0),
-        "aluminum_anodizing_chrome": ("aluminum", 40.79, 57.5),
-        "aluminum_anodizing_organic_black": ("aluminum", 40.79, 35.0),
-        "corrosion_resistant_steel_degreasing": ("stainless_steel", 20.6, 0.0),
-        "corrosion_resistant_steel_loosening": ("stainless_steel", 30.6, 270.0),
-        "corrosion_resistant_steel_etching": ("stainless_steel", 30.6, 25.0),
-        "corrosion_resistant_steel_passivation": ("stainless_steel", 20.6, 22.5),
-        "titanium_degreasing": ("titanium", 25.5, 20.0),
-        "titanium_loosening": ("titanium", 25.5, 120.0),
-        "titanium_etching": ("titanium", 25.5, 15.0),
-        "titanium_passivation": ("titanium", 25.5, 10.0),
-        "steel_phosphating_zinc": ("carbon_steel", 36.2, 25.0),
-        "steel_phosphating_oxide": ("carbon_steel", 36.2, 25.0),
-    }
+def test_norm_based_fixed_operation_times_are_disabled_by_default():
+    processes = get_process_params()
 
-    for process_id, (family_id, prep_time, operation_time) in expected.items():
+    for process_id, operation_time in ec.ELECTROPLATING_FIXED_OPERATION_TIME_MIN_BY_PROCESS.items():
+        process = processes[process_id]
+        family_id = process["material_families"][0]
+        prep_time = process["preparation_time_min"]
         params_default = calculate_electroplating_parameters(
             features=FEATURES_SMALL,
             electroplating_family=family_id,
@@ -127,22 +124,106 @@ def test_norm_based_operations_match_configured_preparation_and_operation_times(
 
         assert params_default["time_model"] == "fixed_time", process_id
         assert params_default["preparation_time_min"] == prep_time, process_id
-        assert params_default["coating_time_min"] == operation_time, process_id
-        assert params_default["operation_time_min"] == prep_time + operation_time, process_id
+        assert process["configured_fixed_operation_time_min"] == operation_time, process_id
+        assert process["fixed_operation_time_min"] == 0.0, process_id
+        assert params_default["coating_time_min"] == 0.0, process_id
+        assert params_default["operation_time_min"] == prep_time, process_id
         assert params_default["coating_time_min"] == params_thick["coating_time_min"], process_id
         assert params_default["operation_time_min"] == params_thick["operation_time_min"], process_id
         assert params_default["coating_thickness_microns"] is None, process_id
+        assert params_default["uses_fixed_operation_time_by_process"] is False, process_id
+
+
+def test_norm_based_fixed_operation_times_can_be_enabled(monkeypatch):
+    monkeypatch.setitem(ec.ELECTROPLATING_TIME_MODEL_CONFIG, "use_fixed_operation_time_by_process", True)
+    process = get_process_params()["aluminum_chemical_oxidation"]
+    expected_prep_time = process["preparation_time_min"]
+    expected_operation_time = process["fixed_operation_time_min"]
+
+    params = calculate_electroplating_parameters(
+        features=FEATURES_SMALL,
+        electroplating_family="aluminum",
+        process_id="aluminum_chemical_oxidation",
+        coating_thickness_microns=None,
+        quantity=1,
+    )
+
+    assert params["time_model"] == "fixed_time"
+    assert params["preparation_time_min"] == expected_prep_time
+    assert params["coating_time_min"] == expected_operation_time
+    assert params["operation_time_min"] == expected_prep_time + expected_operation_time
+    assert params["uses_fixed_operation_time_by_process"] is True
+
+
+def test_coating_thickness_does_not_affect_operation_time_by_default():
+    params_thin = calculate_electroplating_parameters(
+        features=FEATURES_SMALL,
+        electroplating_family="carbon_steel",
+        process_id="galvanization_zinc_phosphating",
+        coating_thickness_microns=5.0,
+        quantity=1,
+    )
+    params_thick = calculate_electroplating_parameters(
+        features=FEATURES_SMALL,
+        electroplating_family="carbon_steel",
+        process_id="galvanization_zinc_phosphating",
+        coating_thickness_microns=50.0,
+        quantity=1,
+    )
+
+    assert params_thin["time_model"] == "faraday_deposition"
+    assert params_thick["time_model"] == "faraday_deposition"
+    assert params_thin["coating_time_min"] == 0.0
+    assert params_thick["coating_time_min"] == 0.0
+    assert params_thin["operation_time_min"] == params_thick["operation_time_min"]
+    assert params_thin["uses_thickness_dependent_operation_time"] is False
+
+
+def test_coating_thickness_operation_time_can_be_enabled(monkeypatch):
+    monkeypatch.setitem(ec.ELECTROPLATING_TIME_MODEL_CONFIG, "use_thickness_dependent_operation_time", True)
+
+    params_thin = calculate_electroplating_parameters(
+        features=FEATURES_SMALL,
+        electroplating_family="carbon_steel",
+        process_id="galvanization_zinc_phosphating",
+        coating_thickness_microns=5.0,
+        quantity=1,
+    )
+    params_thick = calculate_electroplating_parameters(
+        features=FEATURES_SMALL,
+        electroplating_family="carbon_steel",
+        process_id="galvanization_zinc_phosphating",
+        coating_thickness_microns=50.0,
+        quantity=1,
+    )
+
+    assert params_thin["uses_thickness_dependent_operation_time"] is True
+    assert params_thick["uses_thickness_dependent_operation_time"] is True
+    assert params_thin["coating_time_min"] > 0
+    assert params_thick["coating_time_min"] == pytest.approx(10 * params_thin["coating_time_min"])
+    assert params_thick["operation_time_min"] > params_thin["operation_time_min"]
 
 
 def test_requires_thickness_input_flag_matches_time_model():
     processes = get_process_params()
 
-    assert processes["galvanization_zinc_phosphating"]["requires_thickness_input"] is True
-    assert processes["chrome_plating"]["requires_thickness_input"] is True
-    assert processes["aluminum_anodizing_strong"]["requires_thickness_input"] is True
+    assert processes["galvanization_zinc_phosphating"]["requires_thickness_input"] is False
+    assert processes["chrome_plating"]["requires_thickness_input"] is False
+    assert processes["aluminum_anodizing_strong"]["requires_thickness_input"] is False
 
     assert processes["aluminum_weld_etching"]["requires_thickness_input"] is False
     assert processes["aluminum_chemical_oxidation"]["requires_thickness_input"] is False
     assert processes["aluminum_anodizing_water"]["requires_thickness_input"] is False
     assert processes["electropolishing"]["requires_thickness_input"] is False
     assert processes["electropolishing"]["requires_processing_depth_input"] is True
+
+
+def test_requires_thickness_input_flag_can_be_enabled(monkeypatch):
+    monkeypatch.setitem(ec.ELECTROPLATING_TIME_MODEL_CONFIG, "use_thickness_dependent_operation_time", True)
+
+    processes = get_process_params()
+
+    assert processes["galvanization_zinc_phosphating"]["requires_thickness_input"] is True
+    assert processes["chrome_plating"]["requires_thickness_input"] is True
+    assert processes["aluminum_anodizing_strong"]["requires_thickness_input"] is True
+    assert processes["electropolishing"]["requires_thickness_input"] is False

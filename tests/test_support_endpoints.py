@@ -18,7 +18,7 @@ def test_materials_list(client):
     assert "materials" in data["data"]
     arr = data["data"]["materials"]
     assert isinstance(arr, list)
-    assert any(item["id"].startswith("alum_") for item in arr)
+    assert any(item["id"].startswith("steel_") for item in arr)
 
 
 def test_materials_filter_by_process(client):
@@ -31,7 +31,7 @@ def test_materials_filter_by_process(client):
     assert "materials" in data["data"]
     arr = data["data"]["materials"]
     # metals should be filtered out for printing
-    assert all(item["family"] in ("plastic",) for item in arr)
+    assert all(item["family"] in ("plastic_3d",) for item in arr)
 
 
 def test_options_coefficients(client):

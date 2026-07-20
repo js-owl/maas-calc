@@ -3,7 +3,9 @@ Helper functions for accessing configuration data
 """
 
 from typing import Dict, Any, Optional
-from constants import MATERIALS, LOCATIONS, COVER, TOLERANCE, FINISH
+from constants import COVER, TOLERANCE, FINISH
+from commercial_constants import LOCATIONS
+from MATERIALS_gen import MATERIALS
 
 
 def get_material_info(material_id: str) -> Dict[str, Any]:

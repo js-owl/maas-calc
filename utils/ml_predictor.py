@@ -1,11 +1,10 @@
 """
 XGBoost special-equipment classifier for CNC milling.
 
-The old labor-time regressor pipeline was removed. Labor intensity for
-`service_id="cnc-milling"` and `service_id="composite"` is predicted by the
-`ml_models.flexible_ensemble` bundle via `utils.composite_ml_predictor`.
-This module intentionally keeps only the classifier branch that predicts
-`is_need_special_equipment` for CNC milling.
+Labor intensity for `service_id="cnc-milling"` and `service_id="composite"`
+is predicted by the `ml_models.flexible_ensemble` bundle via
+`utils.composite_ml_predictor`. This module contains the classifier branch
+that predicts `is_need_special_equipment` for CNC milling.
 """
 
 import logging

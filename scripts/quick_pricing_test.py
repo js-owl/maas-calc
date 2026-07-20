@@ -58,8 +58,7 @@ def quick_test():
                 "service_id": "printing",
                 "file_id": f"quick-rule-{file_type}-{quantity}",
                 "length": 100.0, "width": 50.0, "height": 10.0,
-                "quantity": quantity, "material_id": "PA11", "material_form": "powder",
-                "k_type": 1.0, "k_process": 1.0,
+                "quantity": quantity, "material_id": "plastic_ABS", "material_form": "thread",
                 "cover_id": ["1"], "k_otk": 1.0, "k_cert": ["a", "f"], "location": "location_1"
             }
             
@@ -84,8 +83,7 @@ def quick_test():
                 "file_data": file_data[file_type],
                 "file_name": f"test.{file_type}",
                 "file_type": file_type,
-                "quantity": quantity, "material_id": "PA11", "material_form": "powder",
-                "k_type": 1.0, "k_process": 1.0,
+                "quantity": quantity, "material_id": "plastic_ABS", "material_form": "thread",
                 "cover_id": ["1"], "k_otk": 1.0, "k_cert": ["a", "f"], "location": "location_1"
             }
             

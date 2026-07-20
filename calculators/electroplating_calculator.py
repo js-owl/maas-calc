@@ -8,9 +8,11 @@ from typing import Any, Dict
 from fastapi import HTTPException
 
 from .base_calculator import BaseCalculator
-from calculations.core import calculate_cost, calculate_k_quantity
+from calculations.core import build_unified_unit_price, calculate_k_quantity
 from calculations.electroplating import calculate_electroplating_parameters
-from constants import COST_STRUCTURE, MATERIALS
+from constants import VAT_RATE
+from commercial_constants import COST_STRUCTURE
+from MATERIALS_gen import MATERIALS
 from models.calculation_models import ElectroplatingCalculationRequest
 from models.response_models import UnifiedCalculationResponse
 from utils.electroplating_config import ELECTROPLATING_SERVICE_ID
@@ -70,33 +72,38 @@ class ElectroplatingAutoCalculator(BaseCalculator):
             base_work_price = process_params["labor_time_hours"] * price_of_hour
             k_quantity = calculate_k_quantity(quantity)
             k_otk = float(request.k_otk or 1.0)
-            work_price_full = base_work_price * k_quantity * k_otk
-            work_price_full_one = base_work_price * k_otk
+            work_price_without_quantity = base_work_price * k_otk
 
             # This calculation branch currently prices galvanic treatment by labor.
             # Bath chemistry/fill cost can be added later as a material component.
             mat_price = 0.0
-            detail_price, price_breakdown = calculate_cost(
-                mat_price,
-                work_price_full,
-                location,
-                breakdown=True,
+            price_special_equipment_to_quantity = 0.0
+            unified_price = build_unified_unit_price(
+                mat_price=mat_price,
+                work_price=work_price_without_quantity,
+                location=location,
+                quantity=quantity,
+                k_quantity=k_quantity,
+                price_special_equipment_to_quantity=price_special_equipment_to_quantity,
             )
-            detail_price_one = calculate_cost(
-                mat_price,
-                work_price_full_one,
-                location,
-            )
-            total_price = detail_price * quantity
+            detail_price = unified_price["detail_price"]
+            detail_price_one = unified_price["detail_price_one"]
+            total_price = unified_price["total_price"]
+            price_breakdown = unified_price["total_price_breakdown"]
 
             price_breakdown.update({
                 "total_price (include quantity)": total_price,
-                "total_time": process_params["labor_time_hours"],
+                "total_time": process_params["order_labor_time_hours"],
+                "work_time_per_part": process_params["labor_time_hours"],
+                "order_labor_time_hours": process_params["order_labor_time_hours"],
+                "order_labor_time_min": process_params["order_labor_time_min"],
                 "process_id": process_params["process"]["id"],
                 "process_label": process_params["process"].get("label"),
                 "electroplating_family": process_params["material_family"].get("id"),
                 "process_time_model": process_params["time_model"],
                 "thickness_role": process_params["thickness_role"],
+                "uses_fixed_operation_time_by_process": process_params.get("uses_fixed_operation_time_by_process"),
+                "uses_thickness_dependent_operation_time": process_params.get("uses_thickness_dependent_operation_time"),
                 "coating_thickness_microns": process_params.get("coating_thickness_microns"),
                 "processing_depth_microns": process_params.get("processing_depth_microns"),
                 "process_parameter_name": process_params.get("process_parameter_name"),
@@ -108,6 +115,7 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                 "batch_quantity_used_as_n": layout["batch_quantity"],
                 "bath_batch_capacity": layout["batch_capacity"],
                 "bath_geometric_capacity": layout["geometric_capacity"],
+                "bath_practical_geometric_capacity": layout["practical_geometric_capacity"],
                 "bath_current_capacity": layout["current_capacity"],
                 "bath_weight_capacity": layout["weight_capacity"],
                 "bath_max_weight_kg": layout["max_weight_kg"],
@@ -117,11 +125,7 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                 "batch_quantity_limited_by": layout["batch_quantity_limited_by"],
             })
 
-            detail_price_calculation = self._calculate_detail_calculation(
-                location=location,
-                detail_price_one=detail_price_one,
-                material_price=mat_price,
-            )
+            detail_price_calculation = unified_price["detail_price_calculation"]
 
             response_data = self._create_base_response(
                 file_id=request.file_id,
@@ -131,11 +135,11 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                 part_price_one=detail_price_one,
                 detail_price_one=detail_price_one,
                 total_price=total_price,
-                total_time=process_params["labor_time_hours"],
+                total_time=process_params["order_labor_time_hours"],
                 mat_volume=process_params["geometry"]["volume_dm3"],
                 mat_weight=process_params["part_weight_kg"],
                 mat_price=mat_price,
-                work_price=work_price_full_one,
+                work_price=work_price_without_quantity,
                 work_time=process_params["labor_time_hours"],
                 k_quantity=k_quantity,
                 k_otk=k_otk,
@@ -158,6 +162,7 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                 requested_quantity=layout["requested_quantity"],
                 bath_batch_capacity=layout["batch_capacity"],
                 bath_geometric_capacity=layout["geometric_capacity"],
+                bath_practical_geometric_capacity=layout["practical_geometric_capacity"],
                 bath_current_capacity=layout["current_capacity"],
                 bath_weight_capacity=layout["weight_capacity"],
                 bath_max_weight_kg=layout["max_weight_kg"],
@@ -179,15 +184,22 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                     "base_work_price": base_work_price,
                     "k_quantity": k_quantity,
                     "k_otk": k_otk,
-                    "final_work_price": work_price_full,
+                    "final_work_price": work_price_without_quantity,
+                    "final_work_price_before_quantity": work_price_without_quantity,
+                    "final_work_price_after_quantity": work_price_without_quantity * k_quantity,
                     "labor_time_hours": process_params["labor_time_hours"],
                     "labor_time_min": process_params["labor_time_min"],
+                    "order_labor_time_hours": process_params["order_labor_time_hours"],
+                    "order_labor_time_min": process_params["order_labor_time_min"],
                     "labor_formula_n": layout["batch_quantity"],
+                    "per_detail_operation_labor_min": process_params["per_detail_operation_labor_min"],
                     "operation_time_min": process_params["operation_time_min"],
                     "operation_time_component_min": process_params.get("operation_time_component_min"),
                     "coating_time_min": process_params["coating_time_min"],
                     "process_time_model": process_params.get("time_model"),
                     "thickness_role": process_params.get("thickness_role"),
+                    "uses_fixed_operation_time_by_process": process_params.get("uses_fixed_operation_time_by_process"),
+                    "uses_thickness_dependent_operation_time": process_params.get("uses_thickness_dependent_operation_time"),
                     "coating_thickness_microns": process_params.get("coating_thickness_microns"),
                     "processing_depth_microns": process_params.get("processing_depth_microns"),
                     "process_parameter_name": process_params.get("process_parameter_name"),
@@ -198,6 +210,7 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                     "requested_quantity": layout["requested_quantity"],
                     "bath_batch_capacity": layout["batch_capacity"],
                     "bath_geometric_capacity": layout["geometric_capacity"],
+                    "bath_practical_geometric_capacity": layout["practical_geometric_capacity"],
                     "bath_current_capacity": layout["current_capacity"],
                     "bath_weight_capacity": layout["weight_capacity"],
                     "bath_max_weight_kg": layout["max_weight_kg"],
@@ -216,6 +229,8 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                     "dimensions_mm": process_params["dimensions_mm"],
                     "process_time_model": process_params.get("time_model"),
                     "thickness_role": process_params.get("thickness_role"),
+                    "uses_fixed_operation_time_by_process": process_params.get("uses_fixed_operation_time_by_process"),
+                    "uses_thickness_dependent_operation_time": process_params.get("uses_thickness_dependent_operation_time"),
                     "coating_thickness_microns": process_params.get("coating_thickness_microns"),
                     "processing_depth_microns": process_params.get("processing_depth_microns"),
                     "process_parameter_name": process_params.get("process_parameter_name"),
@@ -224,6 +239,8 @@ class ElectroplatingAutoCalculator(BaseCalculator):
                     "requested_quantity": layout["requested_quantity"],
                     "batch_quantity_used_as_n": layout["batch_quantity"],
                     "bath_batch_capacity": layout["batch_capacity"],
+                    "bath_geometric_capacity": layout["geometric_capacity"],
+                    "bath_practical_geometric_capacity": layout["practical_geometric_capacity"],
                     "bath_weight_capacity": layout["weight_capacity"],
                     "bath_max_weight_kg": layout["max_weight_kg"],
                     "batch_weight_kg": layout["batch_weight_kg"],
@@ -238,25 +255,3 @@ class ElectroplatingAutoCalculator(BaseCalculator):
             logger.error("Error in electroplating calculation for file_id %s: %s", request.file_id, e)
             raise HTTPException(status_code=500, detail=str(e))
 
-    def _calculate_detail_calculation(
-        self,
-        *,
-        location: str,
-        detail_price_one: float,
-        material_price: float,
-    ) -> Dict[str, Any]:
-        profit_material = COST_STRUCTURE.get(location, {}).get("profit_material", 0)
-        other_profit = COST_STRUCTURE.get(location, {}).get("other_profit", 0)
-        salary_fund_with_taxes = round(
-            (float(detail_price_one) - material_price * float(1 + profit_material)) / float(1 + other_profit),
-            2,
-        )
-        taxes = round(float(detail_price_one) * 0.22, 2)
-        return {
-            "material_price": round(material_price * float(1 + profit_material), 2),
-            "salary_fund_with_taxes": round(salary_fund_with_taxes * float(1 + other_profit), 2),
-            "price_special_equipment": 0.0,
-            "detail_price_one": detail_price_one,
-            "taxes": taxes,
-            "detail_price_one_with_taxes": detail_price_one + taxes,
-        }

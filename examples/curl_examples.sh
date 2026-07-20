@@ -52,8 +52,8 @@ curl -X POST "$API_ENDPOINT" \
       "thickness": 10.0
     },
     "quantity": 5,
-    "material_id": "PA11",
-    "material_form": "powder",
+    "material_id": "plastic_ABS",
+    "material_form": "thread",
     "n_dimensions": 1,
     "k_type": 1.0,
     "k_process": 1.0,
@@ -77,7 +77,7 @@ curl -X POST "$API_ENDPOINT" \
       "thickness": 15.0
     },
     "quantity": 10,
-    "material_id": "alum_D16",
+    "material_id": "non_ferrous_Д16",
     "material_form": "sheet",
     "tolerance_id": "1",
     "finish_id": "1",
@@ -102,7 +102,7 @@ curl -X POST "$API_ENDPOINT" \
       "thickness": 25.0
     },
     "quantity": 8,
-    "material_id": "alum_AMC",
+    "material_id": "non_ferrous_АМц",
     "material_form": "rod",
     "tolerance_id": "2",
     "finish_id": "3",
@@ -127,7 +127,7 @@ curl -X POST "$API_ENDPOINT" \
       "thickness": 5.0
     },
     "quantity": 15,
-    "material_id": "alum_D16",
+    "material_id": "non_ferrous_Д16",
     "material_form": "sheet",
     "paint_type": "acrylic",
     "paint_prepare": "a",
@@ -170,7 +170,7 @@ curl -X POST "$API_ENDPOINT" \
     },
     "quantity": 1,
     "material_id": "invalid_material",
-    "material_form": "powder"
+    "material_form": "thread"
   }' \
   -w "\nStatus: %{http_code}\n\n"
 

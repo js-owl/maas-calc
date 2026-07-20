@@ -1,11 +1,13 @@
+# Local dev: STL calculator with hot reload on maas-shared.
+# Environment: LOCAL MACHINE ONLY.
+# Usage: docker compose -f docker-compose.local.yml up --build
+
 services:
   backend-calc:
     build:
       context: .
       dockerfile: Dockerfile.dev
     container_name: backend-calc
-    # ports:
-      # - "7000:7000"
     environment:
       - CORS_ORIGINS=["*"]
       - CORS_ALLOW_CREDENTIALS=true

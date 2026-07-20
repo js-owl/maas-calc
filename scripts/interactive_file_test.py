@@ -23,9 +23,10 @@ from typing import Dict, Any, List, Optional, Tuple
 
 # Add parent directory to path to import constants
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from constants import APP_VERSION, MATERIALS, TOLERANCE, FINISH, COVER
+from constants import APP_VERSION, TOLERANCE, FINISH, COVER
+from MATERIALS_gen import MATERIALS
 try:
-    from constants import LOCATIONS
+    from commercial_constants import LOCATIONS
 except ImportError:
     LOCATIONS = {"location_1": {"name": "location_1"}}
 from utils.electroplating_config import (
@@ -49,17 +50,15 @@ SERVICES = {
 # Default parameters for quick test mode
 DEFAULT_PARAMS = {
     "printing": {
-        "material_id": "PA11",
-        "material_form": "powder",
+        "material_id": "plastic_ABS",
+        "material_form": "thread",
         "quantity": 1,
-        "k_type": 1.0,
-        "k_process": 1.0,
         "cover_id": ["1"],
         "k_otk": 1.0,
         "k_cert": ["a", "f"]
     },
     "cnc-milling": {
-        "material_id": "alum_D16",
+        "material_id": "non_ferrous_Д16",
         "material_form": "sheet",
         "quantity": 1,
         "tolerance_id": "1",
@@ -474,31 +473,7 @@ class InteractiveFileTester:
                     print("❌ Number of dimensions must be between 1 and 100")
             except ValueError:
                 print("❌ Please enter a valid number")
-        
-        # k_type
-        while True:
-            try:
-                k_type = float(self.get_user_input("Enter type coefficient (0.1-2.0)"))
-                if 0.1 <= k_type <= 2.0:
-                    params['k_type'] = k_type
-                    break
-                else:
-                    print("❌ Type coefficient must be between 0.1 and 2.0")
-            except ValueError:
-                print("❌ Please enter a valid number")
-        
-        # k_process
-        while True:
-            try:
-                k_process = float(self.get_user_input("Enter process coefficient (0.1-2.0)"))
-                if 0.1 <= k_process <= 2.0:
-                    params['k_process'] = k_process
-                    break
-                else:
-                    print("❌ Process coefficient must be between 0.1 and 2.0")
-            except ValueError:
-                print("❌ Please enter a valid number")
-        
+              
         # k_otk
         while True:
             try:
@@ -717,7 +692,7 @@ class InteractiveFileTester:
         
         # Coefficients
         print(f"\n📈 Applied Coefficients:")
-        for key in ['k_quantity', 'k_complexity', 'k_cover', 'k_tolerance', 'k_finish']:
+        for key in ['k_quantity', 'k_cover', 'k_tolerance', 'k_finish']:
             value = results.get(key)
             if value is not None:
                 print(f"  {key}: {value:.3f}")

@@ -32,8 +32,8 @@ TEST_DATA = {
             "height": 10.0
         },
         "quantity": 5,
-        "material_id": "PA11",  # Порошок PA11 - real from constants
-        "material_form": "powder",
+        "material_id": "plastic_ABS",  #  real from constants
+        "material_form": "thread",
         "k_type": 1.0,
         "k_process": 1.0,
         "cover_id": ["1"],  # Покраска - real from constants
@@ -50,7 +50,7 @@ TEST_DATA = {
             "height": 15.0
         },
         "quantity": 10,
-        "material_id": "alum_D16",  # Алюминий Д16 - real from constants
+        "material_id": "non_ferrous_Д16",  # Алюминий Д16 - real from constants
         "material_form": "sheet",
         "tolerance_id": "1",  # IT7 - real from constants
         "finish_id": "1",     # 12.5 - real from constants
@@ -69,7 +69,7 @@ TEST_DATA = {
             "height": 25.0
         },
         "quantity": 8,
-        "material_id": "alum_AMC",  # Алюминий АМц - real from constants
+        "material_id": "non_ferrous_АМц",  # Алюминий АМц - real from constants
         "material_form": "rod",
         "tolerance_id": "2",  # IT8 - real from constants
         "finish_id": "3",     # 3.2 - real from constants
@@ -88,7 +88,7 @@ TEST_DATA = {
             "height": 5.0
         },
         "quantity": 15,
-        "material_id": "alum_D16",  # Алюминий Д16 - real from constants
+        "material_id": "non_ferrous_Д16",  # Алюминий Д16 - real from constants
         "material_form": "sheet",
         "paint_type": "acrylic",    # real from PAINT_COEFFICIENTS
         "paint_prepare": "a",       # real from PROCESS_COEFFICIENTS
@@ -113,7 +113,7 @@ EDGE_CASES = {
         "file_id": "large-qty-test",
         "dimensions": {"length": 50.0, "width": 50.0, "height": 10.0},
         "quantity": 1000,
-        "material_id": "alum_D16",  # Real material
+        "material_id": "non_ferrous_Д16",  # Real material
         "material_form": "sheet"
     },
     
@@ -122,8 +122,8 @@ EDGE_CASES = {
         "file_id": "multi-cover-test",
         "dimensions": {"length": 50.0, "width": 50.0, "height": 5.0},
         "quantity": 3,
-        "material_id": "PA12",  # Different plastic material
-        "material_form": "powder",
+        "material_id": "plastic_PETG",  # Different plastic material
+        "material_form": "thread",
         "cover_id": ["1", "2"]  # Покраска + Гальваника - real from constants
     },
     
@@ -132,7 +132,7 @@ EDGE_CASES = {
         "file_id": "complex-cnc-test",
         "dimensions": {"length": 200.0, "width": 150.0, "height": 50.0},
         "quantity": 2,
-        "material_id": "alum_D16",  # Real material
+        "material_id": "non_ferrous_Д16",  # Real material
         "material_form": "sheet",
         "cnc_complexity": "high",
         "cnc_setup_time": 5.0,
@@ -145,7 +145,7 @@ EDGE_CASES = {
         "file_id": "tolerance-test",
         "dimensions": {"length": 80.0, "width": 30.0, "height": 30.0},
         "quantity": 5,
-        "material_id": "alum_AMC",  # Real material
+        "material_id": "non_ferrous_АМц",  # Real material
         "material_form": "rod",
         "tolerance_id": "5",  # IT11 - real from constants
         "finish_id": "4",     # 1.6 - real from constants
@@ -157,7 +157,7 @@ EDGE_CASES = {
         "file_id": "paint-test",
         "dimensions": {"length": 60.0, "width": 40.0, "height": 3.0},
         "quantity": 20,
-        "material_id": "alum_D16",  # Real material
+        "material_id": "non_ferrous_Д16",  # Real material
         "material_form": "sheet",
         "paint_type": "epoxy",      # Real from PAINT_COEFFICIENTS
         "paint_prepare": "c",       # Real from PROCESS_COEFFICIENTS
@@ -181,7 +181,7 @@ INVALID_CASES = {
         "dimensions": {"length": 10.0, "width": 10.0, "height": 10.0},
         "quantity": 1,
         "material_id": "invalid_material",
-        "material_form": "powder"
+        "material_form": "thread"
     },
     
     "invalid_dimensions": {
@@ -340,23 +340,23 @@ def test_comprehensive_materials() -> None:
             "file_id": "material-test-pa11",
             "dimensions": {"length": 50.0, "width": 30.0, "height": 8.0},
             "quantity": 3,
-            "material_id": "PA11",
-            "material_form": "powder"
+            "material_id": "plastic_ABS",
+            "material_form": "thread"
         },
         {
             "service_id": "printing", 
             "file_id": "material-test-pa12",
             "dimensions": {"length": 40.0, "width": 25.0, "height": 6.0},
             "quantity": 2,
-            "material_id": "PA12",
-            "material_form": "powder"
+            "material_id": "plastic_PETG",
+            "material_form": "thread"
         },
         {
             "service_id": "cnc-milling",
             "file_id": "material-test-alum-d16",
             "dimensions": {"length": 70.0, "width": 45.0, "height": 12.0},
             "quantity": 4,
-            "material_id": "alum_D16",
+            "material_id": "non_ferrous_Д16",
             "material_form": "sheet",
             "tolerance_id": "1",
             "finish_id": "1"
@@ -366,7 +366,7 @@ def test_comprehensive_materials() -> None:
             "file_id": "material-test-alum-amc",
             "dimensions": {"length": 60.0, "width": 35.0, "height": 10.0},
             "quantity": 6,
-            "material_id": "alum_AMC",
+            "material_id": "non_ferrous_АМц",
             "material_form": "sheet",
             "tolerance_id": "2",
             "finish_id": "2"
@@ -395,7 +395,7 @@ def test_all_tolerance_finish_combinations() -> None:
             "file_id": f"tolerance-finish-test-{i+1}",
             "dimensions": {"length": 50.0, "width": 30.0, "height": 8.0},
             "quantity": 2,
-            "material_id": "alum_D16",
+            "material_id": "non_ferrous_Д16",
             "material_form": "sheet",
             "tolerance_id": combo["tolerance_id"],
             "finish_id": combo["finish_id"],
@@ -423,8 +423,8 @@ def test_all_cover_types() -> None:
             "file_id": f"cover-test-{i+1}",
             "dimensions": {"length": 30.0, "width": 20.0, "height": 5.0},
             "quantity": 1,
-            "material_id": "PA11",
-            "material_form": "powder",
+            "material_id": "plastic_ABS",
+            "material_form": "thread",
             "cover_id": cover_test["cover_id"]
         }
         test_endpoint(API_ENDPOINT, test_data, f"Cover Test: {cover_test['description']}")
@@ -466,7 +466,7 @@ def test_all_paint_types() -> None:
             "file_id": f"paint-test-{i+1}",
             "dimensions": {"length": 40.0, "width": 30.0, "height": 4.0},
             "quantity": 5,
-            "material_id": "alum_D16",
+            "material_id": "non_ferrous_Д16",
             "material_form": "sheet",
             "paint_type": paint_test["paint_type"],
             "paint_prepare": paint_test["paint_prepare"],

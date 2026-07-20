@@ -117,11 +117,10 @@ Select mode: 1
 🚀 Quick Test Mode - Using default parameters for 3D Printing
 
 Default Parameters:
-  material_id: PA11
-  material_form: powder
+  material_id: plastic_ABS
+  material_form: thread
   quantity: 1
   n_dimensions: 1
-  k_type: 1.0
   k_process: 1.0
   cover_id: ['1']
   k_otk: 1.0
@@ -184,7 +183,7 @@ Test another file? (y/n): n
 ### Service-Specific Parameters
 
 #### 3D Printing
-- Material selection (PA11, PA12, etc.)
+- Material selection (plastic_ABS, plastic_PETG, etc.)
 - Number of dimensions
 - Type and process coefficients
 - Quality control parameters

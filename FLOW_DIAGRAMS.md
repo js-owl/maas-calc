@@ -528,7 +528,7 @@ graph TD
     B -->|/coefficients| E[list_coefficients Function]
     B -->|/locations| F[list_locations Function]
     
-    C --> G[MATERIALS from constants.py]
+    C --> G[MATERIALS from MATERIALS_gen.py]
     D --> H[Hardcoded Service List]
     E --> I[TOLERANCE from constants.py]
     E --> J[FINISH from constants.py]

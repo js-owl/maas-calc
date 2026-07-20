@@ -15,9 +15,9 @@ class UnifiedCalculationResponse(BaseModel):
     
     # Core calculation results
     part_price: float = Field(..., description="Final calculated price per part")
-    detail_price: float = Field(..., description="Final calculated price per detail, include needed special equipment, available by ml only")
+    detail_price: float = Field(..., description="Actual unit price for the current order after distributed tooling and k_quantity")
     part_price_one: float = Field(..., description="Calculated price of one part in order")
-    detail_price_one: float = Field(..., description="Calculated price of one detail in order, include needed special equipment, available by ml only")
+    detail_price_one: float = Field(..., description="Reference unit price before k_quantity; includes distributed special tooling when applicable")
     total_price: float = Field(..., description="Total price for all quantity of details")
     total_time: float = Field(..., description="Total work time predicted for one part")
     
@@ -32,7 +32,6 @@ class UnifiedCalculationResponse(BaseModel):
     
     # Coefficients and factors
     k_quantity: Optional[float] = Field(None, description="Quantity coefficient")
-    k_complexity: Optional[float] = Field(None, description="Dimensions number coefficient")
     k_cover: Optional[float] = Field(None, description="Cover processing coefficient")
     k_tolerance: Optional[float] = Field(None, description="Tolerance coefficient")
     k_finish: Optional[float] = Field(None, description="Finish coefficient")
@@ -40,16 +39,7 @@ class UnifiedCalculationResponse(BaseModel):
     # Manufacturing details
     manufacturing_cycle: Optional[float] = Field(None, description="Cycle of manufacturing in days")
     suitable_machines: Optional[List[str]] = Field(None, description="Suitable manufacturing machines")
-    
-    # Service-specific fields (optional based on service type)
-    # 3D Printing specific
-    k_type: Optional[float] = Field(None, description="Type coefficient (3D printing)")
-    k_process: Optional[float] = Field(None, description="Process coefficient (3D printing)")
-    
-    # CNC specific
-    cnc_complexity: Optional[str] = Field(None, description="CNC complexity level")
-    cnc_setup_time: Optional[float] = Field(None, description="CNC setup time")
-    
+
     # Extracted parameters (for reference)
     extracted_dimensions: Optional[Dimensions] = Field(None, description="Dimensions extracted from file")
     used_parameters: Optional[Dict[str, Any]] = Field(None, description="Parameters used in calculation")
@@ -67,7 +57,7 @@ class UnifiedCalculationResponse(BaseModel):
     material_costs: Optional[Dict[str, Any]] = Field(None, description="Material cost breakdown")
     work_price_breakdown: Optional[Dict[str, Any]] = Field(None, description="Work price calculation breakdown")
     total_price_breakdown: Optional[Dict[str, Any]] = Field(None, description="Total price calculation breakdown")
-    detail_price_calculation: Optional[Dict[str, Any]] = Field(None, description="Price calculation breakdown of one detail for front aka 'calculation'")
+    detail_price_calculation: Optional[Dict[str, Any]] = Field(None, description="Compact frontend calculation: material, labor, tooling, price without VAT, VAT, total")
 
     # Electroplating-specific fields
     electroplating_process_id: Optional[str] = Field(None, description="Galvanic process ID used in electroplating_auto")
@@ -80,13 +70,14 @@ class UnifiedCalculationResponse(BaseModel):
     thickness_role: Optional[str] = Field(None, description="Meaning of the micron parameter: coating, oxide layer, removed layer, reference, or not applicable")
     coating_surface_area_dm2: Optional[float] = Field(None, description="Processed surface area in dm²")
     coating_mass_kg: Optional[float] = Field(None, description="Part mass used for electroplating labor norms")
-    batch_quantity: Optional[int] = Field(None, description="Actual n used in electroplating labor formula for one bath load")
+    batch_quantity: Optional[int] = Field(None, description="Actual n used in electroplating labor formula: maximum practical parts that fit in one bath, or 1 in single-part fallback")
     requested_quantity: Optional[int] = Field(None, description="Requested order quantity from API request")
-    bath_batch_capacity: Optional[int] = Field(None, description="Maximum number of parts that can be treated in one bath by geometry/current limits")
-    bath_geometric_capacity: Optional[int] = Field(None, description="Maximum number of parts that fit into the bath by rectangular OBB packing")
+    bath_batch_capacity: Optional[int] = Field(None, description="Maximum number of parts that can be treated in one bath by practical geometry/current/weight limits")
+    bath_geometric_capacity: Optional[int] = Field(None, description="Ideal number of parts that fit on the hanging plane by the two largest OBB dimensions")
+    bath_practical_geometric_capacity: Optional[int] = Field(None, description="Practical hanging-plane capacity used for batch sizing after technological derating")
     bath_current_capacity: Optional[int] = Field(None, description="Maximum number of parts allowed by current limit")
     bath_weight_capacity: Optional[int] = Field(None, description="Maximum number of parts allowed by bath max_weight_kg")
     bath_max_weight_kg: Optional[float] = Field(None, description="Maximum total batch weight allowed for the selected galvanic operation")
     batch_weight_kg: Optional[float] = Field(None, description="Total weight of the selected one-bath batch quantity")
     batch_count: Optional[int] = Field(None, description="Estimated number of electroplating batches for requested quantity")
-    batch_quantity_limited_by: Optional[str] = Field(None, description="What limited the actual batch quantity: requested_quantity, geometry, current, weight, or a combined limit")
+    batch_quantity_limited_by: Optional[str] = Field(None, description="What limited the formula n: geometry, current, weight, or a combined limit")

@@ -24,10 +24,10 @@ This guide explains how to deploy the STL & STP Manufacturing Calculations API u
    docker compose up -d
 
    # Development with hot reload
-   docker compose -f docker-compose.dev.yml up -d
+   docker compose -f docker-compose.local.yml up -d
 
    # Production with Traefik (requires existing Traefik setup)
-   docker compose -f docker-compose.prod.yml up -d
+   docker compose -f docker-compose.yml up -d
    ```
 
 3. **Access the API**
@@ -39,8 +39,8 @@ This guide explains how to deploy the STL & STP Manufacturing Calculations API u
 
 ```
 ├── docker-compose.yml          # Production deployment with Caddy
-├── docker-compose.dev.yml      # Development deployment
-├── docker-compose.prod.yml     # Production deployment with Traefik
+├── docker-compose.local.yml      # Development deployment
+├── docker-compose.yml     # Production deployment with Traefik
 ├── Dockerfile                  # Production image
 ├── Dockerfile.dev              # Development image
 ├── Caddyfile                   # Caddy reverse proxy configuration
@@ -73,7 +73,7 @@ The following environment variables can be configured:
 - Requires existing Traefik setup
 - Uses `traefik-global-proxy` network
 - Automatic service discovery via labels
-- Update domain in `docker-compose.prod.yml` labels
+- Update domain in `docker-compose.yml` labels
 
 ## 🚀 Deployment Options
 
@@ -88,9 +88,9 @@ For development with hot reload:
 start.bat dev
 
 # Manual commands
-docker compose -f docker-compose.dev.yml up -d
-docker compose -f docker-compose.dev.yml logs -f
-docker compose -f docker-compose.dev.yml down
+docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml logs -f
+docker compose -f docker-compose.local.yml down
 ```
 
 ### Production Deployment
@@ -116,9 +116,9 @@ docker compose down
 start.bat traefik
 
 # Manual commands
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml logs -f
-docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.yml up -d
+docker compose -f docker-compose.yml logs -f
+docker compose -f docker-compose.yml down
 ```
 
 ### Scaling
@@ -130,7 +130,7 @@ To scale the API service:
 docker compose up -d --scale stl-api=3
 
 # Scale to 3 instances (Traefik)
-docker compose -f docker-compose.prod.yml up -d --scale stl-api=3
+docker compose -f docker-compose.yml up -d --scale stl-api=3
 ```
 
 ## 🔍 Monitoring and Logs
@@ -308,7 +308,7 @@ For advanced setups, Traefik provides:
 
 ```bash
 # Run in debug mode
-docker-compose -f docker-compose.dev.yml up
+docker-compose -f docker-compose.local.yml up
 
 # Access container shell
 docker-compose exec stl-api-dev bash
@@ -337,7 +337,7 @@ docker compose up -d --scale stl-api=3
 ```
 
 #### Traefik
-Traefik automatically discovers and load balances services via labels in `docker-compose.prod.yml`.
+Traefik automatically discovers and load balances services via labels in `docker-compose.yml`.
 
 ## 🔄 CI/CD Integration
 
@@ -367,7 +367,7 @@ jobs:
 For issues related to Docker deployment:
 
 1. Check the logs: `docker compose logs -f` or use `./start.sh logs`
-2. Verify configuration files (`Caddyfile` for Caddy, `docker-compose.prod.yml` for Traefik)
+2. Verify configuration files (`Caddyfile` for Caddy, `docker-compose.yml` for Traefik)
 3. Check system resources
 4. Review security settings
 

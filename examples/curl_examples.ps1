@@ -58,8 +58,8 @@ $printingData = @{
         thickness = 10.0
     }
     quantity = 5
-    material_id = "PA11"
-    material_form = "powder"
+    material_id = "plastic_ABS"
+    material_form = "thread"
     n_dimensions = 1
     k_type = 1.0
     k_process = 1.0
@@ -89,7 +89,7 @@ $millingData = @{
         thickness = 15.0
     }
     quantity = 10
-    material_id = "alum_D16"
+    material_id = "non_ferrous_Д16"
     material_form = "sheet"
     tolerance_id = "1"
     finish_id = "1"
@@ -120,7 +120,7 @@ $latheData = @{
         thickness = 25.0
     }
     quantity = 8
-    material_id = "alum_AMC"
+    material_id = "non_ferrous_АМц"
     material_form = "rod"
     tolerance_id = "2"
     finish_id = "3"
@@ -151,7 +151,7 @@ $paintingData = @{
         thickness = 5.0
     }
     quantity = 15
-    material_id = "alum_D16"
+    material_id = "non_ferrous_Д16"
     material_form = "sheet"
     paint_type = "acrylic"
     paint_prepare = "a"

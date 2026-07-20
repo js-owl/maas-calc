@@ -15,27 +15,28 @@ from .base_calculator import BaseCalculator
 from models.response_models import UnifiedCalculationResponse
 from utils.ml_predictor import ml_predictor
 from utils.composite_ml_predictor import composite_ml_predictor
+from commercial_constants import COST_STRUCTURE
 from constants import (
-    COST_STRUCTURE, MATERIALS, TOLERANCE, 
-    FINISH, COVER, SPECIAL_EQUIPMENT_COEF, 
-    SPECIAL_EQUIPMENT_MATERIAL, SPECIAL_EQUIPMENT_FORM
+    TOLERANCE,
+    FINISH, COVER, SPECIAL_EQUIPMENT_COEF,
+    SPECIAL_EQUIPMENT_MATERIAL, SPECIAL_EQUIPMENT_FORM,
+    COMPOSITE_SPECIAL_EQUIPMENT_MATERIAL, COMPOSITE_SPECIAL_EQUIPMENT_FORM,
+    COMPOSITE_SPECIAL_EQUIPMENT_MARGIN,
 )
+from MATERIALS_gen import MATERIALS
 
 try:
     from constants import DOP_MATERIALS
-except ImportError:  # Backward compatibility with older constants.py
+except ImportError:
     DOP_MATERIALS = {}
 from calculations.core import (
     calculate_k_quantity, calculate_cost, calculate_cover_coefficient,
-    calculate_cycle, check_machines, get_material_info, calculate_billable_material_weight
+    calculate_cycle, check_machines, get_material_info, calculate_billable_material_weight,
+    build_unified_unit_price
 )
 
 logger = logging.getLogger(__name__)
 
-
-COMPOSITE_SPECIAL_EQUIPMENT_MATERIAL = "mdf"
-COMPOSITE_SPECIAL_EQUIPMENT_FORM = "plate"
-COMPOSITE_SPECIAL_EQUIPMENT_MARGIN = 1.2
 
 
 class MLCalculator(BaseCalculator):
@@ -75,7 +76,7 @@ class MLCalculator(BaseCalculator):
             # Get material information
             material_id = getattr(request, 'material_id', 'unknown')
             material_form = getattr(request, 'material_form', 'unknown')
-            material_info = get_material_info(material_id, material_form)
+            material_info = get_material_info(material_id, material_form, service_id)
             
             # CNC milling is ML-only. Labor intensity is predicted by the
             # flexible_ensemble bundle; tooling need remains a separate XGBoost
@@ -134,25 +135,28 @@ class MLCalculator(BaseCalculator):
                 location
             )
 
-            # Calculate prices
-            part_price, price_bw = calculate_cost(
-                material_price,
-                work_price_full,
-                location,
-                breakdown=True
-            )
+            # Unified pricing pipeline: calculate_cost first, then add tooling,
+            # then apply k_quantity to the whole unit price.
             price_special_equipment_to_quantity = price_special_equipment / quantity
-            detail_price = part_price + price_special_equipment_to_quantity
-            price_bw["detail_price (include special_equipment)"] = detail_price
-            part_price_one = calculate_cost(
-                material_price,
-                work_price_full_one,
-                location
+            unified_price = build_unified_unit_price(
+                mat_price=material_price,
+                work_price=work_price_full_one,
+                location=location,
+                quantity=quantity,
+                k_quantity=k_quantity,
+                price_special_equipment_to_quantity=price_special_equipment_to_quantity,
             )
-            detail_price_one = part_price_one + price_special_equipment_to_quantity
-            total_price = detail_price * quantity
-            price_bw["total_price (include quantity)"] = total_price
+            price_bw = unified_price["total_price_breakdown"]
+            part_price_one = unified_price["base_cost"]
+            part_price = round(part_price_one * k_quantity, 2)
+            detail_price_one = unified_price["detail_price_one"]
+            detail_price = unified_price["detail_price"]
+            total_price = unified_price["total_price"]
+            price_bw["detail_price (include special_equipment)"] = detail_price
             
+            price_bw["material_form"] = material_costs.get('material_form')
+            price_bw["requested_material_form"] = material_costs.get('requested_material_form')
+            price_bw["material_form_fallback_applied"] = material_costs.get('material_form_fallback_applied', False)
             price_bw["price_per_kg"] = material_costs.get('price_per_kg', 0.0) # add to front display
             price_bw["minimum_order_quantity_kg"] = material_costs.get('minimum_order_quantity_kg')
             price_bw["minimum_order_quantity_applied"] = material_costs.get('minimum_order_quantity_applied', False)
@@ -168,13 +172,7 @@ class MLCalculator(BaseCalculator):
             # Calculate manufacturing cycle
             manufacturing_cycle = calculate_cycle(cover_id, quantity, k_otk)
             
-            # Calculation of one detail for front
-            detail_price_calculation = self._calculate_detail_calculation(
-                location,
-                detail_price_one,
-                material_price,
-                price_special_equipment_to_quantity
-            )
+            detail_price_calculation = unified_price["detail_price_calculation"]
 
             # Create response
             response_data = self._create_base_response(
@@ -209,7 +207,9 @@ class MLCalculator(BaseCalculator):
                     'k_otk': k_otk,
                     'k_tolerance': k_tolerance,
                     'k_finish': k_finish,
-                    'final_work_price': work_price_full
+                    'final_work_price': work_price_full_one,
+                    'final_work_price_before_quantity': work_price_full_one,
+                    'final_work_price_after_quantity': work_price_full
                 },
                 total_price_breakdown=price_bw,
                 detail_price_calculation=detail_price_calculation
@@ -233,8 +233,13 @@ class MLCalculator(BaseCalculator):
             material_id = getattr(request, 'material_id', 'unknown')
             material_form = getattr(request, 'material_form', 'unknown')
 
-            material_data = get_material_info(material_id, material_form)
-            price_per_kg = material_data['price'] # rub/kg
+            material_data = get_material_info(material_id, material_form, service_id)
+            price_per_kg = float(material_data['price'] or 0.0) # rub/kg
+            if service_id == 'cnc-milling' and price_per_kg <= 0.0:
+                raise ValueError(
+                    f"No positive material price for material_id={material_id!r}, "
+                    f"material_form={material_form!r}."
+                )
             density = material_data['density'] # kg/m3
             minimum_order_quantity = material_data.get('minimum_order_quantity')
 
@@ -261,6 +266,9 @@ class MLCalculator(BaseCalculator):
 
             return {
                 'material_id': material_id,
+                'requested_material_form': material_form,
+                'material_form': material_data.get('material_bar'),
+                'material_form_fallback_applied': material_data.get('material_form_fallback_applied', False),
                 'volume': volume,
                 'raw_estimated_weight_kg': round(raw_weight, 2), # kg per unit before MOQ
                 'estimated_weight_kg': billable_weight, # kg per unit after order-level MOQ allocation
@@ -276,8 +284,13 @@ class MLCalculator(BaseCalculator):
             
         except Exception as e:
             logger.warning(f"Error calculating material costs: {e}")
+            if getattr(request, 'service_id', None) == 'cnc-milling':
+                raise
             return {
-                'material_id': 'unknown',
+                'material_id': getattr(request, 'material_id', 'unknown'),
+                'requested_material_form': getattr(request, 'material_form', 'unknown'),
+                'material_form': 'unknown',
+                'material_form_fallback_applied': False,
                 'raw_estimated_weight_kg': 0.0,
                 'estimated_weight_kg': 0.0,
                 'billable_weight_kg': 0.0,
@@ -297,7 +310,7 @@ class MLCalculator(BaseCalculator):
             material_form = getattr(request, 'material_form', 'unknown')
             ml_features = getattr(request, 'ml_features', {}) or {}
 
-            material_data = get_material_info(material_id, material_form)
+            material_data = get_material_info(material_id, material_form, 'composite')
             price_per_square_meter = float(material_data.get('price', 0.0) or 0.0)
             one_layer_thickness_mm = float(material_data.get('one_layer_thickness', 0.0) or 0.0)
             if one_layer_thickness_mm <= 0.0:
@@ -564,37 +577,6 @@ class MLCalculator(BaseCalculator):
         count_rotated = math.ceil(blank_x / plate_y) * math.ceil(blank_y / plate_x)
         return max(1, int(min(count_normal, count_rotated)))
 
-    def _calculate_detail_calculation(
-            self, 
-            location: str, 
-            detail_price_one: float, 
-            material_price: float,
-            price_special_equipment: float
-        ) -> Dict[str, Any]:
-        "Calculation of one detail for front"
-
-        profit_material = COST_STRUCTURE.get(location, {}).get('profit_material', 0)
-        other_profit = COST_STRUCTURE.get(location, {}).get('other_profit', 0)
-        salary_fund_with_taxes = round(float(
-            float(detail_price_one) - material_price * float(1 + profit_material) - price_special_equipment * float(1 + other_profit)
-            ) / float(1 + other_profit), 2)
-        
-        material_price_to_calc = round(material_price * float(1 + profit_material), 2)
-        salary_fund_with_taxes_to_calc = round(salary_fund_with_taxes * float(1 + other_profit), 2)
-        price_special_equipment_to_calc = round(price_special_equipment * float(1 + other_profit), 2)
-
-        taxes = round(float(detail_price_one) * 0.22, 2)
-        detail_price_calculation = {
-            'material_price': material_price_to_calc,
-            'salary_fund_with_taxes': salary_fund_with_taxes_to_calc,
-            'price_special_equipment': price_special_equipment_to_calc,
-            'detail_price_one': detail_price_one,
-            'taxes': taxes,
-            'detail_price_one_with_taxes': detail_price_one + taxes
-        }
-
-        return detail_price_calculation
-
     def _get_key_features(self, ml_features: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract key features for response.
@@ -653,7 +635,7 @@ class MLCompositeCalculator(MLCalculator):
 
             material_id = getattr(request, "material_id", "unknown")
             material_form = getattr(request, "material_form", "unknown")
-            material_info = get_material_info(material_id, material_form)
+            material_info = get_material_info(material_id, material_form, 'composite')
 
             predicted_hours = composite_ml_predictor.predict_from_file_features(
                 ml_features,
@@ -680,7 +662,7 @@ class MLCompositeCalculator(MLCalculator):
 
             # For composite parts the need for tooling is not predicted by a classifier.
             # The frontend sends this flag explicitly. Any value except 1 is treated as 0
-            # to keep the old calculation path unchanged by default.
+            # to keep default composite pricing unchanged.
 
             is_need_special_equipment = int(getattr(request, 'is_need_special_equipment', 0) or 0)
             is_need_special_equipment = 1 if is_need_special_equipment == 1 else 0
@@ -710,8 +692,8 @@ class MLCompositeCalculator(MLCalculator):
             work_price_special_equipment = predicted_hours_special_equipment * price_of_hour
 
             # If tooling is disabled, material cost is explicitly multiplied by 0.
-            # This protects the old composite calculation path from any accidental
-            # non-zero defaults in DOP_MATERIALS.
+            # This keeps disabled tooling at exactly zero even if
+            # DOP_MATERIALS contains non-zero defaults.
             material_price_special_equipment = (
                 float(special_equipment_material_costs.get('material_price_special_equipment', 0.0) or 0.0)
                 * is_need_special_equipment
@@ -726,22 +708,21 @@ class MLCompositeCalculator(MLCalculator):
             # in the same way as the CNC milling special-equipment cost.
             price_special_equipment_to_quantity = price_special_equipment / quantity
 
-            part_price, price_bw = calculate_cost(
-                material_price,
-                work_price_full,
-                location,
-                breakdown=True
+            unified_price = build_unified_unit_price(
+                mat_price=material_price,
+                work_price=work_price_full_one,
+                location=location,
+                quantity=quantity,
+                k_quantity=k_quantity,
+                price_special_equipment_to_quantity=price_special_equipment_to_quantity,
             )
-            detail_price = part_price + price_special_equipment_to_quantity
+            price_bw = unified_price["total_price_breakdown"]
+            part_price_one = unified_price["base_cost"]
+            part_price = round(part_price_one * k_quantity, 2)
+            detail_price_one = unified_price["detail_price_one"]
+            detail_price = unified_price["detail_price"]
+            total_price = unified_price["total_price"]
             price_bw["detail_price (include special_equipment)"] = detail_price
-
-            part_price_one = calculate_cost(
-                material_price,
-                work_price_full_one,
-                location
-            )
-            detail_price_one = part_price_one + price_special_equipment_to_quantity
-            total_price = detail_price * quantity
 
             material_costs.update(special_equipment_material_costs)
             material_costs['is_need_special_equipment'] = is_need_special_equipment
@@ -756,13 +737,7 @@ class MLCompositeCalculator(MLCalculator):
 
             manufacturing_cycle = calculate_cycle(cover_id, quantity, k_otk)
 
-            # calculation of one detail for front
-            detail_price_calculation = self._calculate_detail_calculation(
-                location,
-                detail_price_one,
-                material_price,
-                price_special_equipment_to_quantity
-            )
+            detail_price_calculation = unified_price["detail_price_calculation"]
             response_data = self._create_base_response(
                 file_id=request.file_id,
                 filename=getattr(request, "filename", None),
@@ -792,7 +767,9 @@ class MLCompositeCalculator(MLCalculator):
                     'k_quantity': k_quantity,
                     'k_cover': k_cover,
                     'k_otk': k_otk,
-                    'final_work_price': work_price_full,
+                    'final_work_price': work_price_full_one,
+                    'final_work_price_before_quantity': work_price_full_one,
+                    'final_work_price_after_quantity': work_price_full,
                 },
                 total_price_breakdown=price_bw,
                 detail_price_calculation=detail_price_calculation

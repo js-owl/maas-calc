@@ -61,7 +61,7 @@ async def test_cnc_milling_uses_flexible_ensemble_and_classifier(monkeypatch):
         file_id="test-cnc",
         service_id="cnc-milling",
         ml_features=MOCK_ML_FEATURES,
-        material_id="alum_D16",
+        material_id="non_ferrous_Д16",
         material_form="sheet",
         quantity=1,
         cover_id=["1"],

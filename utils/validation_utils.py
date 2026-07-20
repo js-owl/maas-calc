@@ -5,11 +5,13 @@ Standardized validation utilities
 from typing import Dict, Any, List, Optional
 from fastapi import HTTPException
 from constants import (
-    ERROR_MESSAGES, ERROR_CODES, MATERIALS, TOLERANCE, FINISH, COVER,
+    ERROR_MESSAGES, ERROR_CODES, TOLERANCE, FINISH, COVER,
     AUTO_SERVICES, NON_AUTO_SERVICES, OTHER_SERVICES
 )
+from MATERIALS_gen import MATERIALS
 from utils.logging_utils import get_logger
 from utils.response_utils import ResponseWrapper
+from calculations.core import resolve_priced_material_form
 from utils.electroplating_config import (
     ELECTROPLATING_SERVICE_ID,
     get_electroplating_process,
@@ -102,6 +104,15 @@ class Validator:
         forms = material_info.get("forms", {})
 
         if material_form not in forms:
+            fallback_form = resolve_priced_material_form(material_id, material_form, service_id)
+            if service_id == "cnc-milling" and fallback_form:
+                logger.warning(
+                    "material_form=%s is unavailable for material_id=%s; cnc-milling will use fallback form=%s",
+                    material_form,
+                    material_id,
+                    fallback_form,
+                )
+                return
             available_forms = list(forms.keys())
             raise ValidationError(
                 field="material_form",
@@ -117,6 +128,15 @@ class Validator:
 
         form_processes = forms.get(material_form, {}).get("applicable_processes", [])
         if service_id and service_id in AUTO_SERVICES_LIST and service_id not in form_processes:
+            fallback_form = resolve_priced_material_form(material_id, material_form, service_id)
+            if service_id == "cnc-milling" and fallback_form:
+                logger.warning(
+                    "material_form=%s is not applicable for service=%s; cnc-milling will use fallback form=%s",
+                    material_form,
+                    service_id,
+                    fallback_form,
+                )
+                return
             raise ValidationError(
                 field="material_form",
                 message=f"Material form {material_form} is not applicable for service {service_id}",
@@ -311,8 +331,7 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
             errors.append(e)
     
     # Validate cover processing if provided. For electroplating_auto cover_id can
-    # carry the galvanic process id for backward compatibility with the existing
-    # frontend request shape.
+    # carry the galvanic process id when electroplating_process_id is absent.
     if "cover_id" in request_data:
         try:
             if request_data.get("service_id") == ELECTROPLATING_SERVICE_ID:
@@ -373,7 +392,7 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
                 field="electroplating_family",
                 message=(
                     "electroplating_family is required for service_id='electroplating_auto'. "
-                    "material_id is accepted only as a backward-compatible fallback."
+                    "material_id is accepted only for deriving the same family."
                 ),
                 value=requested_family,
             ))
@@ -383,10 +402,10 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
             if not is_material_family_allowed_for_electroplating_process(resolved_family, process_id):
                 # New frontend flow sends electroplating_family explicitly, so a
                 # family/process mismatch is best reported on electroplating_family.
-                # Legacy requests may still send only material_id; in that case the
-                # invalid user choice is the selected electroplating_process_id for
-                # the material-derived family. Keep the old field-level contract so
-                # existing tests and clients can highlight the process selector.
+                # Requests may still send only material_id; in that case the invalid
+                # user choice is the selected electroplating_process_id for the
+                # material-derived family. Keep the field-level contract so clients
+                # can highlight the process selector.
                 mismatch_field = "electroplating_family" if requested_family else "electroplating_process_id"
                 mismatch_value = resolved_family if requested_family else process_id
                 errors.append(ValidationError(

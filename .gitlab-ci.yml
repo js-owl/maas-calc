@@ -94,6 +94,7 @@ build:production:
       echo "=================================================="
     # Clean up local images
     - docker rmi $PROD_PUSH_IMAGE:$IMAGE_TAG $PROD_PUSH_IMAGE:latest $PROD_BUILD_IMAGE:builder-latest $PROD_BUILD_IMAGE:latest || true
+    - docker image prune -f || true
   only:
     - /^v[0-9]+\.[0-9]+\.[0-9]+$/
   tags:
@@ -168,6 +169,7 @@ build:development:
       echo "=================================================="
     # Clean up local images
     - docker rmi $DEV_BUILD_IMAGE:$DEV_IMAGE_TAG $DEV_BUILD_IMAGE:dev-latest $DEV_BUILD_IMAGE:dev-builder-latest || true
+    - docker image prune -f || true
   only:
     - /^dev-v[0-9]+\.[0-9]+\.[0-9]+$/
   tags:
@@ -186,7 +188,9 @@ deploy:production:
     - ssh-keyscan -p $SSH_PORT $SSH_HOST >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
-    - scp -P $SSH_PORT docker-compose.prod.yml $SSH_USER@$SSH_HOST:$REMOTE_PROJECT_PATH/
+    - scp -P $SSH_PORT docker-compose.yml $SSH_USER@$SSH_HOST:$REMOTE_PROJECT_PATH/
+    - ssh -p $SSH_PORT $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_PROJECT_PATH/scripts/ci"
+    - scp -P $SSH_PORT scripts/ci/deploy-cleanup.sh $SSH_USER@$SSH_HOST:$REMOTE_PROJECT_PATH/scripts/ci/deploy-cleanup.sh
     # Deploy to remote server
     - |
       ssh -p $SSH_PORT $SSH_USER@$SSH_HOST << EOF
@@ -215,41 +219,41 @@ deploy:production:
         echo ${NEXUS_PUSH_PASSWORD} | docker login -u ${NEXUS_PUSH_USER} --password-stdin ${NEXUS_PUSH_REGISTRY}
         echo "Successfully logged into Nexus registry"
         
-        # Update docker-compose.prod.yml image tag
-        echo "Updating docker-compose.prod.yml with new image tag..."
-        sed -i "s|image:.*maas-prod-stl:.*|image: ${DEV_IMAGE_TAG}:${DEV_IMAGE_TAG}|g" docker-compose.prod.yml
-        echo "Updated docker-compose.prod.yml"
-        echo "New image: ${NEXUS_PUSH_IMAGE}:${DEV_IMAGE_TAG}"
+        # Pin image to tag built by build:production (IMAGE_TAG = CI_COMMIT_TAG, e.g. v1.2.3)
+        echo "Updating docker-compose.yml with new image tag..."
+        sed -i "s|image:.*maas-prod-stl:.*|image: ${PROD_PUSH_IMAGE}:${IMAGE_TAG}|g" docker-compose.yml
+        echo "Updated docker-compose.yml"
+        echo "New image: ${PROD_PUSH_IMAGE}:${IMAGE_TAG}"
         
         # Pull new image
         echo "Pulling new Docker image..."
-        sudo docker compose -f docker-compose.prod.yml pull
+        sudo docker compose -f docker-compose.yml pull
         echo "Image pulled successfully"
         
         # Stop and remove old container
         echo "Stopping old container..."
-        sudo docker compose -f docker-compose.prod.yml down || true
+        sudo docker compose -f docker-compose.yml down || true
         echo "Old container stopped"
         
         # Start new container
         echo "Starting new container..."
-        sudo docker compose -f docker-compose.prod.yml up -d
+        sudo docker compose -f docker-compose.yml up -d
         echo "New container started"
         
         # Verify deployment
         sleep 10
         
         # Check container status
-        if docker compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+        if docker compose -f docker-compose.yml ps | grep -q "Up"; then
           echo "Container is running"
         else
           echo "Container is not running"
-          sudo docker compose -f docker-compose.prod.yml logs
+          sudo docker compose -f docker-compose.yml logs
           exit 1
         fi
         
         # Check if application is responding
-        CONTAINER_NAME=\$(sudo docker compose -f docker-compose.prod.yml ps -q)
+        CONTAINER_NAME=\$(sudo docker compose -f docker-compose.yml ps -q)
         if [ -n "\$CONTAINER_NAME" ]; then
           # Wait for application to be ready
           for i in {1..30}; do
@@ -258,7 +262,7 @@ deploy:production:
               break
             elif [ \$i -eq 30 ]; then
               echo "Application health check failed after 30 attempts"
-              sudo docker compose -f docker-compose.prod.yml logs
+              sudo docker compose -f docker-compose.yml logs
               exit 1
             else
               echo "Waiting for application to be ready... (\$i/30)"
@@ -269,17 +273,21 @@ deploy:production:
         
         # Log deployment info
         echo "Production deployment successful"
-        echo "Image: ${NEXUS_PUSH_IMAGE}:${DEV_IMAGE_TAG}"
+        echo "Image: ${PROD_PUSH_IMAGE}:${IMAGE_TAG}"
         echo "Container status:"
-        sudo docker compose -f docker-compose.prod.yml ps
+        sudo docker compose -f docker-compose.yml ps
         echo "Container logs (last 20 lines):"
-        sudo docker compose -f docker-compose.prod.yml logs --tail=20
+        sudo docker compose -f docker-compose.yml logs --tail=20
         
         # Create deployment marker file
         echo "Production deployment completed at \$(date)" > deployment.log
-        echo "Image: ${NEXUS_PUSH_IMAGE}:${DEV_IMAGE_TAG}" >> deployment.log
-        echo "Git tag: ${DEV_IMAGE_TAG}" >> deployment.log
+        echo "Image: ${PROD_PUSH_IMAGE}:${IMAGE_TAG}" >> deployment.log
+        echo "Git tag: ${IMAGE_TAG}" >> deployment.log
         echo "Git commit: ${CI_COMMIT_SHA}" >> deployment.log
+
+        mkdir -p scripts/ci
+        . scripts/ci/deploy-cleanup.sh
+        cleanup_app_images "${PROD_PUSH_IMAGE}" "${IMAGE_TAG}"
       EOF
   only:
     - /^v[0-9]+\.[0-9]+\.[0-9]+$/
@@ -304,7 +312,9 @@ deploy:development:
     - DEV_IMAGE_TAG=$CI_COMMIT_TAG
     - echo "Development image tag:" $DEV_IMAGE_TAG
   script:
-    - scp -P $DEV_SSH_PORT docker-compose.prod.yml $DEV_SSH_USER@$DEV_SSH_HOST:$DEV_REMOTE_PROJECT_PATH/
+    - scp -P $DEV_SSH_PORT docker-compose.yml $DEV_SSH_USER@$DEV_SSH_HOST:$DEV_REMOTE_PROJECT_PATH/
+    - ssh -p $DEV_SSH_PORT $DEV_SSH_USER@$DEV_SSH_HOST "mkdir -p $DEV_REMOTE_PROJECT_PATH/scripts/ci"
+    - scp -P $DEV_SSH_PORT scripts/ci/deploy-cleanup.sh $DEV_SSH_USER@$DEV_SSH_HOST:$DEV_REMOTE_PROJECT_PATH/scripts/ci/deploy-cleanup.sh
     # Deploy to remote development server
     - |
       ssh -p $DEV_SSH_PORT $DEV_SSH_USER@$DEV_SSH_HOST << EOF
@@ -333,41 +343,41 @@ deploy:development:
         echo ${NEXUS_BUILD_PASSWORD} | docker login -u ${NEXUS_BUILD_USER} --password-stdin ${NEXUS_BUILD_REGISTRY}
         echo "Successfully logged into Nexus registry"
         
-        # Update docker-compose.prod.yml image tag
-        echo "Updating docker-compose.prod.yml with new image tag..."
-        sed -i "s|image:.*maas-prod-stl:.*|image: ${DEV_BUILD_IMAGE}:${DEV_IMAGE_TAG}|g" docker-compose.prod.yml
-        echo "Updated docker-compose.prod.yml"
-        echo "New image: ${NDEV_BUILD_IMAGE}:${DEV_IMAGE_TAG}"
+        # Pin image to tag built by build:development (IMAGE_TAG = CI_COMMIT_TAG, e.g. dev-v1.2.3)
+        echo "Updating docker-compose.yml with new image tag..."
+        sed -i "s|image:.*maas-prod-stl:.*|image: ${DEV_BUILD_IMAGE}:${IMAGE_TAG}|g" docker-compose.yml
+        echo "Updated docker-compose.yml"
+        echo "New image: ${DEV_BUILD_IMAGE}:${IMAGE_TAG}"
         
         # Pull new image
         echo "Pulling new Docker image..."
-        sudo docker compose -f docker-compose.prod.yml pull
+        sudo docker compose -f docker-compose.yml pull
         echo "Image pulled successfully"
         
         # Stop and remove old container
         echo "Stopping old container..."
-        sudo docker compose -f docker-compose.prod.yml down || true
+        sudo docker compose -f docker-compose.yml down || true
         echo "Old container stopped"
         
         # Start new container
         echo "Starting new container..."
-        sudo docker compose -f docker-compose.prod.yml up -d
+        sudo docker compose -f docker-compose.yml up -d
         echo "New container started"
         
         # Verify deployment
         sleep 10
         
         # Check container status
-        if docker compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+        if docker compose -f docker-compose.yml ps | grep -q "Up"; then
           echo "Container is running"
         else
           echo "Container is not running"
-          sudo docker compose -f docker-compose.prod.yml logs
+          sudo docker compose -f docker-compose.yml logs
           exit 1
         fi
         
         # Check if application is responding
-        CONTAINER_NAME=\$(sudo docker compose -f docker-compose.prod.yml ps -q)
+        CONTAINER_NAME=\$(sudo docker compose -f docker-compose.yml ps -q)
         if [ -n "\$CONTAINER_NAME" ]; then
           # Wait for application to be ready
           for i in {1..30}; do
@@ -376,7 +386,7 @@ deploy:development:
               break
             elif [ \$i -eq 30 ]; then
               echo "Application health check failed after 30 attempts"
-              sudo docker compose -f docker-compose.prod.yml logs
+              sudo docker compose -f docker-compose.yml logs
               exit 1
             else
               echo "Waiting for application to be ready... (\$i/30)"
@@ -387,17 +397,21 @@ deploy:development:
         
         # Log deployment info
         echo "Development deployment successful"
-        echo "Image: ${NEXUS_PUSH_IMAGE}:${DEV_IMAGE_TAG}"
+        echo "Image: ${DEV_BUILD_IMAGE}:${IMAGE_TAG}"
         echo "Container status:"
-        sudo docker compose -f docker-compose.prod.yml ps
+        sudo docker compose -f docker-compose.yml ps
         echo "Container logs (last 20 lines):"
-        sudo docker compose -f docker-compose.prod.yml logs --tail=20
+        sudo docker compose -f docker-compose.yml logs --tail=20
         
         # Create deployment marker file
         echo "Development deployment completed at \$(date)" > deployment.log
-        echo "Image: ${NEXUS_PUSH_IMAGE}:${DEV_IMAGE_TAG}" >> deployment.log
-        echo "Git tag: ${DEV_IMAGE_TAG}" >> deployment.log
+        echo "Image: ${DEV_BUILD_IMAGE}:${IMAGE_TAG}" >> deployment.log
+        echo "Git tag: ${IMAGE_TAG}" >> deployment.log
         echo "Git commit: ${CI_COMMIT_SHA}" >> deployment.log
+
+        mkdir -p scripts/ci
+        . scripts/ci/deploy-cleanup.sh
+        cleanup_app_images "${DEV_BUILD_IMAGE}" "${IMAGE_TAG}"
       EOF
   only:
     - /^dev-v[0-9]+\.[0-9]+\.[0-9]+$/

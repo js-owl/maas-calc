@@ -8,10 +8,8 @@ def test_calculate_printing_ok(client):
             "height": 10
         },
         "quantity": 2,
-        "material_id": "PA11",
-        "material_form": "powder",
-        "k_type": 1.0,
-        "k_process": 1.0,
+        "material_id": "plastic_ABS",
+        "material_form": "thread",
         "cover_id": ["1"],
         "k_cert": ["a"]
     }
@@ -30,7 +28,7 @@ def test_calculate_cnc_milling_without_file_data_returns_error(client):
         "file_id": "test-cnc-milling-456",
         "dimensions": {"length": 100, "width": 50, "height": 10},
         "quantity": 1,
-        "material_id": "alum_D16",
+        "material_id": "non_ferrous_Д16",
         "material_form": "sheet",
         "tolerance_id": "1",
         "finish_id": "1",
@@ -44,3 +42,13 @@ def test_calculate_cnc_milling_without_file_data_returns_error(client):
     assert "file_data is required" in data.get("error", "")
 
 
+
+
+def test_other_service_returns_successful_zero_manual_price(client):
+    payload = {"service_id": "bending", "file_id": "manual-bending-001"}
+    r = client.post("/calculate-price", json=payload)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["success"] is True
+    assert data["data"]["calculation_method"] == "manual_pricing"
+    assert data["data"]["total_price"] == 0

@@ -41,8 +41,8 @@ This repository includes a complete GitLab CI/CD pipeline configuration for auto
 ├── .dockerignore               # Files excluded from Docker builds
 ├── Dockerfile.prod             # Optimized multistage production Dockerfile
 ├── Dockerfile.dev              # Development Dockerfile with test dependencies
-├── docker-compose.prod.yml     # Production deployment with Traefik
-├── docker-compose.dev.yml      # Development environment
+├── docker-compose.yml     # Production deployment with Traefik
+├── docker-compose.local.yml      # Development environment
 ├── requirements.txt            # Production Python dependencies
 ├── requirements-dev.txt        # Development/testing dependencies
 ├── GITLAB_VARIABLES.md         # Required GitLab CI/CD variables
@@ -84,7 +84,7 @@ Triggered by git tags matching pattern: `/^dev-v[0-9]+\.[0-9]+\.[0-9]+$/`
   - GitLab cache for pip packages + Docker layer caching
 
 ### 2. Deploy Stage
-- **SSH Deployment**: Automated deployment to remote server using `docker-compose.prod.yml`
+- **SSH Deployment**: Automated deployment to remote server using `docker-compose.yml`
 - **Environment-Specific**: Separate credentials and paths for production and development
 - **Health Verification**: Ensures application is running correctly after deployment
 - **Rollback Support**: Easy rollback to previous version by redeploying an earlier tag
@@ -97,7 +97,7 @@ Triggered by git tags matching pattern: `/^dev-v[0-9]+\.[0-9]+\.[0-9]+$/`
 source scripts/setup-local-env.sh
 
 # Start development environment
-docker-compose -f docker-compose.dev.yml up -d
+docker-compose -f docker-compose.local.yml up -d
 
 # Build production image locally
 docker build -f Dockerfile.prod -t maas-prod-stl:local .
@@ -118,7 +118,7 @@ git push origin v1.0.0
 The pipeline will:
 1. Build optimized production image using `Dockerfile.prod`
 2. Push to private registry with tags: `v1.0.0` and `latest`
-3. Deploy to production server via SSH using `docker-compose.prod.yml`
+3. Deploy to production server via SSH using `docker-compose.yml`
 4. Verify deployment health with application health checks
 
 ### Development Deployment
@@ -133,7 +133,7 @@ git push origin dev-v1.0.0
 The pipeline will:
 1. Build optimized development image using `Dockerfile.prod`
 2. Push to private registry with tags: `dev-v1.0.0` and `dev-latest`
-3. Deploy to development server via SSH using `docker-compose.prod.yml`
+3. Deploy to development server via SSH using `docker-compose.yml`
 4. Verify deployment health with application health checks
 
 ## ⚡ Build Performance Optimization
@@ -214,9 +214,9 @@ See [GITLAB_VARIABLES.md](GITLAB_VARIABLES.md) for complete variable configurati
 
 ### Deployment Configuration
 - **Method**: SSH-based deployment to remote server
-- **Compose File**: Uses `docker-compose.prod.yml` with Traefik integration
+- **Compose File**: Uses `docker-compose.yml` with Traefik integration
 - **Health Check**: HTTP endpoint verification via Traefik
-- **Rollback**: Manual via `docker compose -f docker-compose.prod.yml down/up`
+- **Rollback**: Manual via `docker compose -f docker-compose.yml down/up`
 
 ## 🚨 Current Security Features
 
@@ -249,13 +249,13 @@ See [GITLAB_VARIABLES.md](GITLAB_VARIABLES.md) for complete variable configurati
 3. **Deployment Issues**
    ```bash
    # Check container logs on remote server
-   ssh -p $SSH_PORT $SSH_USER@$SSH_HOST "cd $REMOTE_PROJECT_PATH && docker compose -f docker-compose.prod.yml logs"
+   ssh -p $SSH_PORT $SSH_USER@$SSH_HOST "cd $REMOTE_PROJECT_PATH && docker compose -f docker-compose.yml logs"
    
    # Check container status
-   ssh -p $SSH_PORT $SSH_USER@$SSH_HOST "cd $REMOTE_PROJECT_PATH && docker compose -f docker-compose.prod.yml ps"
+   ssh -p $SSH_PORT $SSH_USER@$SSH_HOST "cd $REMOTE_PROJECT_PATH && docker compose -f docker-compose.yml ps"
    
    # Check Traefik routing
-   ssh -p $SSH_PORT $SSH_USER@$SSH_HOST "cd $REMOTE_PROJECT_PATH && docker compose -f docker-compose.prod.yml logs stl-api"
+   ssh -p $SSH_PORT $SSH_USER@$SSH_HOST "cd $REMOTE_PROJECT_PATH && docker compose -f docker-compose.yml logs stl-api"
    ```
 
 ### Health Checks

@@ -16,6 +16,8 @@ from __future__ import annotations
 from itertools import permutations
 from typing import Any, Dict, Mapping, Optional
 
+from constants import DEFAULT_ELECTROPLATING_PROCESS_ID, ELECTROPLATING_BATH_CLEARANCE_MM
+
 ELECTROPLATING_SERVICE_ID = "electroplating_auto"
 NON_AUTO_ELECTROPLATING_SERVICE = "electroplating"
 NOT_APPLICABLE_ELECTROPLATING_FAMILY = "not_applicable"
@@ -537,12 +539,27 @@ ELECTROPLATING_MATERIAL_FAMILIES: Dict[str, Dict[str, Any]] = {
 }
 
 ELECTROPLATING_DEFAULTS: Dict[str, Any] = {
-    'process_id': 'aluminum_anodizing_water',
+    'process_id': DEFAULT_ELECTROPLATING_PROCESS_ID,
     'coating_thickness_microns': None,
     'processing_depth_microns': None,
     'preparation_time_min': 30.0,
     'mount_unmount_time_min': 2.5,
-    'clearance_mm': 20.0
+    'clearance_mm': ELECTROPLATING_BATH_CLEARANCE_MM
+}
+
+# Runtime switches for the operative-time component of electroplating labor.
+#
+# Business meaning:
+# - preparation_time_min, mounting/unmounting time, workers count, quantity and
+#   bath capacity remain active regardless of these switches;
+# - when use_fixed_operation_time_by_process is False, values from
+#   ELECTROPLATING_FIXED_OPERATION_TIME_MIN_BY_PROCESS are kept in config but
+#   are treated as 0 minutes at runtime;
+# - when use_thickness_dependent_operation_time is False, Faraday coating/layer
+#   thickness calculations are kept in config but do not add operative time.
+ELECTROPLATING_TIME_MODEL_CONFIG: Dict[str, bool] = {
+    "use_fixed_operation_time_by_process": False,
+    "use_thickness_dependent_operation_time": False,
 }
 
 LEGACY_PROCESS_ALIASES: Dict[str, str] = {
@@ -633,6 +650,10 @@ ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS.update({
     "tin_bismuth": 32.13,
     "galvanization_zinc_phosphating": 45.95,
     "galvanization_zinc_chromating": 45.95,
+    "cadmium_plating_chlorine_phosphating": 61.36,
+    "cadmium_plating_chlorine_chromating": 61.36,
+    "cadmium_plating_sulfuric_phosphating": 61.36,
+    "cadmium_plating_sulfuric_chromating": 61.36,
 
     # Fixed-time chemical/conversion/anodizing operations from shop norms.
     # For these operations coating_thickness_microns must not affect operative time.
@@ -641,10 +662,10 @@ ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS.update({
     "aluminum_anodizing_water": 40.79,
     "aluminum_anodizing_chrome": 40.79,
     "aluminum_anodizing_organic_black": 40.79,
-    "corrosion_resistant_steel_degreasing": 20.6,
+    "corrosion_resistant_steel_degreasing": 23.1,
     "corrosion_resistant_steel_loosening": 30.6,
     "corrosion_resistant_steel_etching": 30.6,
-    "corrosion_resistant_steel_passivation": 20.6,
+    "corrosion_resistant_steel_passivation": 23.1,
     "titanium_degreasing": 25.5,
     "titanium_loosening": 25.5,
     "titanium_etching": 25.5,
@@ -658,7 +679,7 @@ ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS.update({
 # time is kept separately in ELECTROPLATING_PREPARATION_TIME_MIN_BY_PROCESS.
 ELECTROPLATING_FIXED_OPERATION_TIME_MIN_BY_PROCESS: Dict[str, float] = {
     "aluminum_weld_etching": 0.0,
-    "aluminum_chemical_oxidation": 14.0,
+    "aluminum_chemical_oxidation": 840.0,
     "aluminum_anodizing_water": 35.0,
     "aluminum_anodizing_chrome": 57.5,
     "aluminum_anodizing_organic_black": 35.0,
@@ -693,6 +714,18 @@ def _optional_bool(value: Any) -> Optional[bool]:
     return None
 
 
+def get_time_model_config() -> Dict[str, bool]:
+    """Return switches controlling electroplating operative-time components."""
+    return {
+        "use_fixed_operation_time_by_process": bool(
+            ELECTROPLATING_TIME_MODEL_CONFIG.get("use_fixed_operation_time_by_process", False)
+        ),
+        "use_thickness_dependent_operation_time": bool(
+            ELECTROPLATING_TIME_MODEL_CONFIG.get("use_thickness_dependent_operation_time", False)
+        ),
+    }
+
+
 def _default_requires_thickness_input(profile: Mapping[str, Any]) -> bool:
     """Return whether frontend should ask for coating/layer thickness.
 
@@ -700,6 +733,9 @@ def _default_requires_thickness_input(profile: Mapping[str, Any]) -> bool:
     thickness require coating_thickness_microns from the user. Norm-based
     fixed-time operations and electropolishing do not use coating thickness.
     """
+    if not get_time_model_config()["use_thickness_dependent_operation_time"]:
+        return False
+
     time_model = str(profile.get("time_model") or "").strip()
     thickness_role = str(profile.get("thickness_role") or "").strip()
     return (
@@ -745,8 +781,8 @@ def normalize_material_family_id(family_id: Optional[str]) -> str:
 def get_non_auto_electroplating_operations() -> list[Dict[str, Any]]:
     """Return canonical galvanic operations from ELECTROPLATING_OPERATIONS.
 
-    The function name is kept for backward compatibility with older code. It no
-    longer reads operations from constants.NON_AUTO_SERVICES.
+    The name reflects that these operations are exposed for the non-auto
+    electroplating catalog. Runtime process data is built from ELECTROPLATING_OPERATIONS.
     """
     result: list[Dict[str, Any]] = []
     seen: set[str] = set()
@@ -809,8 +845,15 @@ def _operation_binding(operation: Mapping[str, Any]) -> Dict[str, Any]:
     )
 
     if operation_id in ELECTROPLATING_FIXED_OPERATION_TIME_MIN_BY_PROCESS:
+        configured_fixed_time_min = ELECTROPLATING_FIXED_OPERATION_TIME_MIN_BY_PROCESS[operation_id]
+        effective_fixed_time_min = (
+            configured_fixed_time_min
+            if get_time_model_config()["use_fixed_operation_time_by_process"]
+            else 0.0
+        )
         result.setdefault("time_model", "fixed_time")
-        result.setdefault("fixed_operation_time_min", ELECTROPLATING_FIXED_OPERATION_TIME_MIN_BY_PROCESS[operation_id])
+        result.setdefault("fixed_operation_time_min", effective_fixed_time_min)
+        result.setdefault("configured_fixed_operation_time_min", configured_fixed_time_min)
         result.setdefault("thickness_role", "not_applicable")
         result.setdefault("default_thickness_microns", 0.0)
         result.setdefault("requires_thickness_input", False)
@@ -1017,7 +1060,7 @@ def get_material_families_for_process(process_id: Optional[str] = None) -> Dict[
 
 
 def infer_material_family(material_id: str, material_info: Mapping[str, Any]) -> str:
-    """Return explicit galvanic material family configured in constants.MATERIALS.
+    """Return explicit galvanic material family configured in MATERIALS_gen.MATERIALS.
 
     The historical function name is kept to avoid touching all imports, but this
     is no longer a heuristic. Every material must define electroplating_family.
@@ -1050,7 +1093,7 @@ def is_material_allowed_for_electroplating_process(
     """Return whether a material is allowed for a concrete galvanic operation.
 
     This is intentionally based only on the explicit electroplating_family field
-    in constants.MATERIALS and the explicit material_families binding of the
+    in MATERIALS_gen.MATERIALS and the explicit material_families binding of the
     operation in ELECTROPLATING_OPERATION_PROFILES. No text heuristics are used.
     """
     process = get_electroplating_process(process_id)

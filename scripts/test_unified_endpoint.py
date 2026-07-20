@@ -24,9 +24,8 @@ def test_unified_endpoint_without_file():
             'width': 50.0,
             'height': 10.0
         },
-        'material_id': 'PA11',
-        'material_form': 'powder',
-        'k_type': 1.0,
+        'material_id': 'plastic_ABS',
+        'material_form': 'thread',
         'k_process': 1.0,
         'cover_id': ['1'],
         'k_cert': []
@@ -70,7 +69,7 @@ def test_unified_endpoint_cnc_milling():
             'width': 100.0,
             'height': 25.0
         },
-        'material_id': 'alum_D16',
+        'material_id': 'non_ferrous_Д16',
         'material_form': 'sheet',
         'cover_id': ['1', '2'],
         'k_cert': ['a', 'f']

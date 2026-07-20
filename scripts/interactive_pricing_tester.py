@@ -233,8 +233,7 @@ class InteractivePricingTester:
             "service_id": "printing",
             "file_id": f"rule-{file_type}-{quantity}",
             "length": 100.0, "width": 50.0, "height": 10.0,
-            "quantity": quantity, "material_id": "PA11", "material_form": "powder",
-            "k_type": 1.0, "k_process": 1.0,
+            "quantity": quantity, "material_id": "plastic_ABS", "material_form": "thread",
             "cover_id": ["1"], "k_otk": 1.0, "k_cert": ["a", "f"], "location": "location_1"
         }
         
@@ -273,7 +272,6 @@ class InteractivePricingTester:
                     'mat_price': data.get('mat_price', 0) or 0,
                     'work_price': data.get('work_price', 0) or 0,
                     'work_time': data.get('work_time', 0) or 0,
-                    'k_complexity': data.get('k_complexity', 0) or 0,
                     'k_cover': data.get('k_cover', 0) or 0,
                     'k_otk': data.get('k_otk', 0) or 0,
                     'manufacturing_cycle': data.get('manufacturing_cycle', 0) or 0,
@@ -303,8 +301,7 @@ class InteractivePricingTester:
             "file_data": self.test_files_data[file_type]['data'],
             "file_name": self.test_files_data[file_type]['name'],
             "file_type": file_type,
-            "quantity": quantity, "material_id": "PA11", "material_form": "powder",
-            "k_type": 1.0, "k_process": 1.0,
+            "quantity": quantity, "material_id": "plastic_ABS", "material_form": "thread",
             "cover_id": ["1"], "k_otk": 1.0, "k_cert": ["a", "f"], "location": "location_1"
         }
         
@@ -346,7 +343,6 @@ class InteractivePricingTester:
                     'mat_price': data.get('mat_price', 0) or 0,
                     'work_price': data.get('work_price', 0) or 0,
                     'work_time': data.get('work_time', 0) or 0,
-                    'k_complexity': data.get('k_complexity', 0) or 0,
                     'k_cover': data.get('k_cover', 0) or 0,
                     'k_otk': data.get('k_otk', 0) or 0,
                     'manufacturing_cycle': data.get('manufacturing_cycle', 0) or 0,

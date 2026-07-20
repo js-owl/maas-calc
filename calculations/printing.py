@@ -6,11 +6,12 @@ import logging
 from typing import Dict, Any
 from .core import (
     resolve_material, calculate_mat_volume, calculate_mat_weight, 
-    calculate_mat_price, calculate_work_price, calculate_work_time,
-    calculate_k_quantity, calculate_k_complexity, calculate_cost, calculate_cycle,
+    calculate_mat_price,
+    calculate_k_quantity, calculate_cost, calculate_cycle,
     check_machines, calculate_printing_work_time, calculate_billable_material_weight
 )
-from constants import CERT_COSTS, COVER, DEFAULTS, COST_STRUCTURE
+from commercial_constants import COST_STRUCTURE
+from constants import COVER, DEFAULTS, PRINTING_LOCATION, PRINTING_VOLUME_RESERVE_MM
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ def _calculate_cover_coefficient(cover_id: list) -> float:
 
 def calculate_printing_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
     """Calculate 3D printing price"""
-    location = "location_3" # only this place has printers
+    location = PRINTING_LOCATION  # only this place has printers
 
     length = request_data["length"]
     width = request_data["width"]
@@ -58,10 +59,10 @@ def calculate_printing_price(request_data: Dict[str, Any]) -> Dict[str, Any]:
 
     material_props = resolve_material(material_id, material_form, process=service_id)
     
-    reserve = 30
+    reserve = PRINTING_VOLUME_RESERVE_MM
     mat_volume = calculate_mat_volume(
-        length+reserve, width+reserve, height+reserve
-    ) # м3
+        length + reserve, width + reserve, height + reserve
+    )  # м3
     raw_mat_weight = calculate_mat_weight(mat_volume, material_props["density"])
     material_usage = calculate_billable_material_weight(
         raw_mat_weight,

@@ -16,8 +16,6 @@ class PrintingCalculationRequest(BaseModel):
     quantity: int
     cover_id: List[str]
     location: str
-    k_type: float
-    k_process: float
     k_otk: float
     k_cert: List[str]
     service_id: str

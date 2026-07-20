@@ -5,15 +5,21 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, Mapping, Optional, Tuple
 
+from constants import (
+    ELECTROPLATING_BATH_CLEARANCE_MM,
+    ELECTROPLATING_LABOR_TIME_COEF,
+    ELECTROPLATING_WEIGHT_WORKER_RULES,
+    PRACTICAL_GEOMETRIC_CAPACITY_FACTOR
+)
 from utils.electroplating_config import (
     ELECTROPLATING_SERVICE_ID,
     NOT_APPLICABLE_ELECTROPLATING_FAMILY,
-    all_orientations,
     get_baths,
     get_defaults,
     get_electroplating_process,
     get_material_families,
     get_electroplating_material_family,
+    get_time_model_config,
     infer_material_family,
     normalize_electroplating_process_id,
     normalize_material_family_id,
@@ -73,9 +79,9 @@ def resolve_electroplating_process(
 ) -> Dict[str, Any]:
     """Resolve the requested galvanic process.
 
-    Explicit electroplating_process_id has priority. For backward compatibility
-    with the existing request shape, the first cover_id value is accepted as the
-    process id when electroplating_process_id is absent.
+    Explicit electroplating_process_id has priority. The current request shape
+    also accepts the first cover_id value as the process id when
+    electroplating_process_id is absent.
     """
     defaults = get_defaults()
     raw_process_id = process_id
@@ -97,10 +103,9 @@ def resolve_material_family_for_electroplating(
 ) -> Dict[str, Any]:
     """Resolve the material family used by electroplating_auto.
 
-    New frontend requests should pass electroplating_family directly because the
-    electroplating price does not depend on a concrete material_id. material_id
-    remains supported as a backward-compatible fallback. If both are supplied,
-    they must describe the same family.
+    Requests should pass electroplating_family directly because the
+    electroplating price does not depend on a concrete material_id. If
+    material_id is also supplied, both inputs must describe the same family.
     """
     requested_family_id = normalize_material_family_id(electroplating_family)
     fallback_family_id: Optional[str] = None
@@ -114,7 +119,7 @@ def resolve_material_family_for_electroplating(
         else:
             raise ValueError(
                 "electroplating_family is required for service_id='electroplating_auto'. "
-                "material_id is accepted only as a backward-compatible fallback."
+                "material_id is accepted only for deriving the same family."
             )
 
     if fallback_family_id and fallback_family_id != requested_family_id:
@@ -172,13 +177,142 @@ def calculate_part_weight_kg(volume_dm3: float, material_family: Mapping[str, An
 
 
 def calculate_workers_by_weight(part_weight_kg: float) -> int:
-    if part_weight_kg <= 8.0:
-        return 1
-    if part_weight_kg <= 16.0:
-        return 2
-    if part_weight_kg <= 30.0:
-        return 3
-    raise ValueError("Electroplating worker norm is configured only for part mass up to 30 kg")
+    for max_weight_kg, workers_count in ELECTROPLATING_WEIGHT_WORKER_RULES:
+        if part_weight_kg <= max_weight_kg:
+            return workers_count
+    max_configured_weight = ELECTROPLATING_WEIGHT_WORKER_RULES[-1][0]
+    raise ValueError(
+        "Electroplating worker norm is configured only for part mass up to "
+        f"{max_configured_weight:g} kg"
+    )
+
+
+def get_hanging_plane_part_dimensions_mm(
+    dimensions_mm: tuple[float, float, float],
+) -> Tuple[float, float, float]:
+    """Convert raw OBB dimensions to a conservative hanging-plane model.
+
+    Galvanic parts are usually suspended, not packed as arbitrary 3D boxes.
+    For an approximate but safer automatic estimate, the two largest part
+    dimensions are treated as the occupied hanging-plane projection, while the
+    smallest dimension is treated as depth/thickness.
+    """
+    positive_dims = tuple(_safe_float(value) for value in dimensions_mm)
+    if any(value <= 0 for value in positive_dims):
+        raise ValueError(f"Invalid part dimensions for electroplating bath layout: {dimensions_mm!r}")
+
+    plane_a, plane_b, depth = sorted(positive_dims, reverse=True)
+    return plane_a, plane_b, depth
+
+
+def part_fits_bath_dimensions_without_clearance(
+    dimensions_mm: tuple[float, float, float],
+    bath_dims_mm: tuple[float, float, float],
+) -> bool:
+    """Return whether one part can fit inside bath dimensions without clearance.
+
+    For a single requested part we do not estimate a hanging layout. We only
+    need a conservative dimension fit check. Sorting both OBB and bath
+    dimensions allows the part to be oriented by its bounding box dimensions
+    without tying the check to the bath's hanging-plane axes.
+    """
+    part_dims = sorted((_safe_float(value) for value in dimensions_mm), reverse=True)
+    bath_dims = sorted((_safe_float(value) for value in bath_dims_mm), reverse=True)
+    if any(value <= 0 for value in part_dims + bath_dims):
+        return False
+    return all(part_dim <= bath_dim for part_dim, bath_dim in zip(part_dims, bath_dims))
+
+
+def calculate_current_capacity(
+    *,
+    process: Mapping[str, Any],
+    surface_area_dm2: float,
+    fallback_capacity: int,
+    process_id: str,
+) -> tuple[float, float, float, int]:
+    """Calculate current capacity or return a neutral fallback for non-electrolytic processes."""
+    current_density = _safe_float(process.get("current_density_a_dm2"))
+    max_current = _safe_float(process.get("max_current_a"))
+    current_per_part = current_density * surface_area_dm2 if current_density > 0 else 0.0
+    if process.get("is_electrolytic", False):
+        if current_per_part <= 0 or max_current <= 0:
+            raise ValueError(f"Current density/max current are not configured for process {process_id!r}")
+        if current_per_part > max_current:
+            raise ValueError(
+                f"One part requires {current_per_part:.3f} A, but bath power limit is {max_current:.3f} A"
+            )
+        current_capacity = max(1, int(math.floor(max_current / current_per_part)))
+    else:
+        current_capacity = max(1, int(fallback_capacity))
+
+    return current_density, max_current, current_per_part, current_capacity
+
+
+def build_single_part_batch_layout(
+    *,
+    dimensions_mm: tuple[float, float, float],
+    bath_dims: tuple[float, float, float],
+    baths: Mapping[str, Mapping[str, Any]],
+    process: Mapping[str, Any],
+    process_id: str,
+    surface_area_dm2: float,
+    part_weight_kg: float,
+    requested_quantity: int,
+    max_weight_kg: float,
+    configured_clearance_mm: float,
+    reason: str,
+) -> Dict[str, Any]:
+    """Build layout for processing one part per bath load without clearance."""
+    current_density, max_current, current_per_part, current_capacity = calculate_current_capacity(
+        process=process,
+        surface_area_dm2=surface_area_dm2,
+        fallback_capacity=1,
+        process_id=process_id,
+    )
+    weight_capacity = max(1, int(math.floor(max_weight_kg / part_weight_kg)))
+    requested_total_weight_kg = requested_quantity * part_weight_kg
+
+    sorted_part_dims = tuple(sorted((_safe_float(value) for value in dimensions_mm), reverse=True))
+    sorted_bath_dims = tuple(sorted(bath_dims, reverse=True))
+    packing_model = "single_part_fit" if requested_quantity == 1 else "single_part_batches"
+    layout = {
+        "packing_model": packing_model,
+        "working_plane_dimensions_mm": {"x": bath_dims[0], "y": bath_dims[1]},
+        "orientation_mm": {"x": sorted_part_dims[0], "y": sorted_part_dims[1], "z": sorted_part_dims[2]},
+        "cell_with_clearance_mm": {"x": sorted_part_dims[0], "y": sorted_part_dims[1], "z": sorted_part_dims[2]},
+        "bath_dimensions_sorted_mm": {"x": sorted_bath_dims[0], "y": sorted_bath_dims[1], "z": sorted_bath_dims[2]},
+        "counts": {"x": 1, "y": 1, "z": 1},
+        "fits_depth": True,
+        "clearance_applied": False,
+        "single_part_reason": reason,
+        "geometric_capacity": 1,
+    }
+
+    return {
+        "bath_id": process_id if process_id in baths else "default",
+        "bath_dimensions_mm": {"length": bath_dims[0], "width": bath_dims[1], "height": bath_dims[2]},
+        "max_weight_kg": max_weight_kg,
+        "clearance_mm": 0.0,
+        "configured_clearance_mm": configured_clearance_mm,
+        "layout": layout,
+        "current_density_a_dm2": current_density,
+        "max_current_a": max_current,
+        "current_per_part_a": round(current_per_part, 6),
+        "current_capacity": current_capacity,
+        "geometric_capacity": 1,
+        "practical_geometric_capacity": 1,
+        "weight_capacity": weight_capacity,
+        "requested_total_weight_kg": round(requested_total_weight_kg, 6),
+        "batch_weight_kg": round(part_weight_kg, 6),
+        "batch_capacity": 1,
+        "batch_quantity": 1,
+        "batch_quantity_limited_by": "single_part" if requested_quantity == 1 else "single_part_batches",
+        "capacity_limiting_factor": "single_part" if requested_quantity == 1 else "single_part_batches",
+        "capacity_limiting_factors": ["single_part" if requested_quantity == 1 else "single_part_batches"],
+        "requested_quantity": requested_quantity,
+        "batch_count": requested_quantity,
+        "is_single_batch": requested_quantity == 1,
+    }
 
 
 def calculate_bath_layout(
@@ -191,10 +325,15 @@ def calculate_bath_layout(
     """Estimate bath fit and the maximum one-bath load.
 
     The model is intentionally simple and deterministic: the part is represented
-    by its OBB, every orientation is tried, and the best rectangular packing with
-    a fixed clearance is selected. The final one-bath capacity is then limited by:
+    by its OBB and treated as a suspended item, not as a freely rotated 3D box.
+    The two largest part dimensions are used as the occupied hanging-plane
+    projection. The smallest part dimension is used as the depth/thickness check.
+    The working plane is defined by the first two bath dimensions. The third bath
+    dimension is used only as a depth fit check, not as another packing axis.
 
-    - geometric packing in the bath;
+    The final one-bath capacity is then limited by:
+
+    - practical geometric capacity on the hanging plane;
     - maximum current for electrolytic operations;
     - maximum allowed total batch weight from ELECTROPLATING_OPERATIONS[*].max_weight_kg.
     """
@@ -216,41 +355,7 @@ def calculate_bath_layout(
     if max_weight_kg <= 0:
         raise ValueError(f"max_weight_kg is not configured for process {process_id!r}")
 
-    clearance = _safe_float(defaults.get("clearance_mm"), 20.0)
-    best = None
-    for orientation in all_orientations(dimensions_mm):
-        cell = tuple(value + clearance for value in orientation)
-        counts = tuple(int(math.floor(bath_dim / cell_dim)) for bath_dim, cell_dim in zip(bath_dims, cell))
-        capacity = counts[0] * counts[1] * counts[2]
-        item = {
-            "orientation_mm": {"x": orientation[0], "y": orientation[1], "z": orientation[2]},
-            "cell_with_clearance_mm": {"x": cell[0], "y": cell[1], "z": cell[2]},
-            "counts": {"x": counts[0], "y": counts[1], "z": counts[2]},
-            "geometric_capacity": capacity,
-        }
-        if best is None or capacity > best["geometric_capacity"]:
-            best = item
-
-    if not best or best["geometric_capacity"] < 1:
-        raise ValueError(
-            f"Part does not fit in electroplating bath for process {process_id!r}. "
-            f"Part OBB: {dimensions_mm}, bath: {bath_dims}, clearance: {clearance} mm"
-        )
-
-    current_density = _safe_float(process.get("current_density_a_dm2"))
-    max_current = _safe_float(process.get("max_current_a"))
-    current_per_part = current_density * surface_area_dm2 if current_density > 0 else 0.0
-    if process.get("is_electrolytic", False):
-        if current_per_part <= 0 or max_current <= 0:
-            raise ValueError(f"Current density/max current are not configured for process {process_id!r}")
-        if current_per_part > max_current:
-            raise ValueError(
-                f"One part requires {current_per_part:.3f} A, but bath power limit is {max_current:.3f} A"
-            )
-        current_capacity = max(1, int(math.floor(max_current / current_per_part)))
-    else:
-        current_capacity = best["geometric_capacity"]
-
+    requested_quantity = _safe_int(quantity)
     if part_weight_kg <= 0:
         raise ValueError("part_weight_kg must be > 0 for electroplating batch weight check")
     if part_weight_kg > max_weight_kg:
@@ -259,20 +364,93 @@ def calculate_bath_layout(
             f"for process {process_id!r}"
         )
 
-    requested_quantity = _safe_int(quantity)
+    clearance = _safe_float(defaults.get("clearance_mm"), ELECTROPLATING_BATH_CLEARANCE_MM)
+
+    plane_dims = bath_dims[:2]
+    depth_limit = bath_dims[2]
+    part_plane_a, part_plane_b, part_depth = get_hanging_plane_part_dimensions_mm(dimensions_mm)
+    best = None
+    # Only rotate the already selected hanging-plane projection by 90 degrees.
+    # Do not put the smallest dimension on the plane, because that recreates an
+    # optimistic 3D-box packing estimate instead of a suspended-load estimate.
+    for orientation in (
+        (part_plane_a, part_plane_b, part_depth),
+        (part_plane_b, part_plane_a, part_depth),
+    ):
+        cell = tuple(value + clearance for value in orientation)
+        fits_depth = cell[2] <= depth_limit
+        if fits_depth:
+            plane_counts = tuple(
+                int(math.floor(plane_dim / cell_dim))
+                for plane_dim, cell_dim in zip(plane_dims, cell[:2])
+            )
+            capacity = plane_counts[0] * plane_counts[1]
+        else:
+            plane_counts = (0, 0)
+            capacity = 0
+        item = {
+            "packing_model": "hanging_plane",
+            "working_plane_dimensions_mm": {"x": plane_dims[0], "y": plane_dims[1]},
+            "orientation_mm": {"x": orientation[0], "y": orientation[1], "z": orientation[2]},
+            "cell_with_clearance_mm": {"x": cell[0], "y": cell[1], "z": cell[2]},
+            "counts": {"x": plane_counts[0], "y": plane_counts[1], "z": 1 if fits_depth else 0},
+            "fits_depth": fits_depth,
+            "geometric_capacity": capacity,
+        }
+        if best is None or capacity > best["geometric_capacity"]:
+            best = item
+
+    if not best or best["geometric_capacity"] < 1:
+        if part_fits_bath_dimensions_without_clearance(dimensions_mm, bath_dims):
+            return build_single_part_batch_layout(
+                dimensions_mm=dimensions_mm,
+                bath_dims=bath_dims,
+                baths=baths,
+                process=process,
+                process_id=process_id,
+                surface_area_dm2=surface_area_dm2,
+                part_weight_kg=part_weight_kg,
+                requested_quantity=requested_quantity,
+                max_weight_kg=max_weight_kg,
+                configured_clearance_mm=clearance,
+                reason=(
+                    "quantity_is_one_and_hanging_plane_with_clearance_has_zero_capacity"
+                    if requested_quantity == 1
+                    else "hanging_plane_with_clearance_has_zero_capacity"
+                ),
+            )
+        raise ValueError(
+            f"Part does not fit in electroplating bath for process {process_id!r}. "
+            f"Part OBB: {dimensions_mm}, bath: {bath_dims}, clearance: {clearance} mm"
+        )
+
+    current_density, max_current, current_per_part, current_capacity = calculate_current_capacity(
+        process=process,
+        surface_area_dm2=surface_area_dm2,
+        fallback_capacity=best["geometric_capacity"],
+        process_id=process_id,
+    )
+
     geometric_capacity = int(best["geometric_capacity"])
+    practical_geometric_capacity = max(
+        1,
+        int(math.floor(geometric_capacity * PRACTICAL_GEOMETRIC_CAPACITY_FACTOR)),
+    )
     weight_capacity = max(1, int(math.floor(max_weight_kg / part_weight_kg)))
-    batch_capacity = max(1, min(geometric_capacity, current_capacity, weight_capacity))
-    batch_quantity = max(1, min(requested_quantity, batch_capacity))
-    batch_count = int(math.ceil(requested_quantity / batch_quantity))
+    batch_capacity = max(1, min(practical_geometric_capacity, current_capacity, weight_capacity))
+    # This is the n used in the labor formula: (operation_coef*x)/n + z*k.
+    # It is the maximum number of such parts that can be processed in one bath,
+    # not the requested order quantity.
+    batch_quantity = batch_capacity
+    batch_count = int(math.ceil(requested_quantity / batch_capacity))
     requested_total_weight_kg = requested_quantity * part_weight_kg
     batch_weight_kg = batch_quantity * part_weight_kg
 
     # Only active constraints should be reported as limiting factors.
-    # For non-electrolytic processes current_capacity is set equal to
-    # geometric_capacity as a neutral value, but current is not a real limit.
+    # For non-electrolytic processes current_capacity is set to the ideal
+    # geometric capacity as a neutral high value, but current is not a real limit.
     capacity_candidates = {
-        "geometry": geometric_capacity,
+        "geometry": practical_geometric_capacity,
         "weight": weight_capacity,
     }
     if process.get("is_electrolytic", False):
@@ -281,12 +459,6 @@ def calculate_bath_layout(
         factor for factor, capacity in capacity_candidates.items() if capacity == batch_capacity
     ]
     capacity_limiting_factor = "_and_".join(capacity_limiting_factors)
-
-    batch_quantity_limited_by = (
-        "requested_quantity"
-        if batch_quantity == requested_quantity
-        else capacity_limiting_factor
-    )
 
     return {
         "bath_id": process_id if process_id in baths else "default",
@@ -299,15 +471,13 @@ def calculate_bath_layout(
         "current_per_part_a": round(current_per_part, 6),
         "current_capacity": current_capacity,
         "geometric_capacity": geometric_capacity,
+        "practical_geometric_capacity": practical_geometric_capacity,
         "weight_capacity": weight_capacity,
         "requested_total_weight_kg": round(requested_total_weight_kg, 6),
         "batch_weight_kg": round(batch_weight_kg, 6),
         "batch_capacity": batch_capacity,
-        # This is the n used in the labor formula: (1.18*x)/n + z*k.
-        # It is limited by the requested order quantity and the maximum
-        # one-bath load from geometry/current/weight constraints.
         "batch_quantity": batch_quantity,
-        "batch_quantity_limited_by": batch_quantity_limited_by,
+        "batch_quantity_limited_by": capacity_limiting_factor,
         "capacity_limiting_factor": capacity_limiting_factor,
         "capacity_limiting_factors": capacity_limiting_factors,
         "requested_quantity": requested_quantity,
@@ -340,6 +510,7 @@ def calculate_process_time_minutes(
         or ("faraday_deposition" if process.get("is_electrolytic", False) else "fixed_time")
     )
     thickness_role = str(process.get("thickness_role") or "coating_thickness")
+    time_model_config = get_time_model_config()
 
     if time_model == "fixed_time":
         fixed_time = _safe_float(
@@ -358,6 +529,8 @@ def calculate_process_time_minutes(
             "process_parameter_name": "reference_thickness_microns" if reference_thickness > 0 else None,
             "coating_time_min": fixed_time,
             "operation_time_component_min": fixed_time,
+            "uses_fixed_operation_time_by_process": time_model_config["use_fixed_operation_time_by_process"],
+            "uses_thickness_dependent_operation_time": False,
         }
 
     current_density = _safe_float(process.get("current_density_a_dm2"))
@@ -367,7 +540,7 @@ def calculate_process_time_minutes(
     if time_model == "faraday_material_removal":
         depth = _safe_float(processing_depth_microns, -1.0)
         if depth < 0:
-            # Backward compatibility: older callers only knew coating_thickness_microns.
+            # Compatibility: some callers still pass material-removal depth through coating_thickness_microns.
             depth = _safe_float(coating_thickness_microns, -1.0)
         if depth < 0:
             depth = _safe_float(process.get("default_processing_depth_microns"), 0.0)
@@ -393,12 +566,28 @@ def calculate_process_time_minutes(
             "process_parameter_name": "processing_depth_microns",
             "coating_time_min": process_time_min,
             "operation_time_component_min": process_time_min,
+            "uses_fixed_operation_time_by_process": False,
+            "uses_thickness_dependent_operation_time": False,
         }
 
     # Default electrolytic coating / oxide growth branch.
     thickness = _safe_float(coating_thickness_microns, -1.0)
     if thickness < 0:
         thickness = _safe_float(process.get("default_thickness_microns"), 0.0)
+
+    if not time_model_config["use_thickness_dependent_operation_time"]:
+        return {
+            "time_model": time_model,
+            "thickness_role": thickness_role,
+            "coating_thickness_microns": thickness if thickness > 0 else None,
+            "processing_depth_microns": None,
+            "process_parameter_microns": thickness if thickness > 0 else None,
+            "process_parameter_name": "coating_thickness_microns" if thickness > 0 else None,
+            "coating_time_min": 0.0,
+            "operation_time_component_min": 0.0,
+            "uses_fixed_operation_time_by_process": False,
+            "uses_thickness_dependent_operation_time": False,
+        }
 
     density = _safe_float(process.get("deposited_density_kg_dm3"))
     if thickness <= 0:
@@ -418,20 +607,9 @@ def calculate_process_time_minutes(
         "process_parameter_name": "coating_thickness_microns",
         "coating_time_min": process_time_min,
         "operation_time_component_min": process_time_min,
+        "uses_fixed_operation_time_by_process": False,
+        "uses_thickness_dependent_operation_time": True,
     }
-
-
-def calculate_coating_time_minutes(
-    process: Mapping[str, Any],
-    coating_thickness_microns: Optional[float],
-) -> Dict[str, Any]:
-    """Backward-compatible wrapper for older tests/imports."""
-    return calculate_process_time_minutes(
-        process=process,
-        coating_thickness_microns=coating_thickness_microns,
-        processing_depth_microns=None,
-        material_family={},
-    )
 
 
 def calculate_electroplating_labor_hours(
@@ -441,16 +619,12 @@ def calculate_electroplating_labor_hours(
     requested_quantity: Optional[int] = None,
     batch_count: Optional[int] = None,
 ) -> Dict[str, float]:
-    """Calculate labor per one detail with one-bath batch splitting.
+    """Calculate labor for one detail and for the requested order.
 
-    The operation-time component ``1.18 * x`` is paid once for every bath load.
-    For a single-batch order this is equivalent to the original formula
-    ``(1.18 * x) / n + z * k`` where ``n`` is the number of parts in the bath.
-
-    For multi-batch orders it is important to account for the extra bath loads:
-    11 parts with a one-bath capacity of 10 should use two operation cycles, not
-    the same cycle divided by 10. Therefore the per-detail operation component is
-    ``(1.18 * x * batch_count) / requested_quantity``.
+    The per-detail formula is ``(operation_coef * x) / n + z * k``.
+    Here ``n`` is the maximum number of such parts that fit in one bath, as
+    returned by ``calculate_bath_layout``. The requested quantity does not replace
+    ``n``; it only multiplies the resulting per-detail labor.
     """
     defaults = get_defaults()
     mount_time_min = _safe_float(defaults.get("mount_unmount_time_min"), 2.5)
@@ -458,17 +632,18 @@ def calculate_electroplating_labor_hours(
     requested_quantity = _safe_int(requested_quantity, batch_quantity)
     batch_count = _safe_int(batch_count, 1)
 
-    effective_n = requested_quantity / batch_count
-    operation_labor_total_min = 1.18 * operation_time_min * batch_count
+    per_detail_operation_labor_min = ELECTROPLATING_LABOR_TIME_COEF * operation_time_min / batch_quantity
+    operation_labor_total_min = per_detail_operation_labor_min * requested_quantity
     mount_unmount_total_min = workers_count * mount_time_min * requested_quantity
-    labor_min = operation_labor_total_min / requested_quantity + workers_count * mount_time_min
+    labor_min = per_detail_operation_labor_min + workers_count * mount_time_min
     order_labor_time_min = operation_labor_total_min + mount_unmount_total_min
     return {
         "mount_unmount_time_min": mount_time_min,
         "labor_formula_batch_quantity_n": float(batch_quantity),
         "labor_formula_requested_quantity": float(requested_quantity),
         "labor_formula_batch_count": float(batch_count),
-        "labor_formula_effective_n": float(effective_n),
+        "labor_formula_effective_n": float(batch_quantity),
+        "per_detail_operation_labor_min": per_detail_operation_labor_min,
         "operation_labor_total_min": operation_labor_total_min,
         "mount_unmount_total_min": mount_unmount_total_min,
         "order_labor_time_min": order_labor_time_min,

@@ -122,7 +122,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY ml_models/ ml_models/
 
 # 2. Configuration files (change infrequently)
-COPY constants.py pip.conf ./
+COPY constants.py commercial_constants.py pip.conf MATERIALS_gen.py ./
 
 # 3. Data models (change less frequently than business logic)
 COPY models/ models/

@@ -3,14 +3,16 @@ Manufacturing Calculation API v3.0.0
 Modular architecture with unified API
 """
 
-import logging
 import os
 from fastapi import FastAPI, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any, Optional
-from datetime import datetime
 from pathlib import Path
 from starlette.concurrency import run_in_threadpool
+import asyncio
+import importlib
+from contextlib import asynccontextmanager
+
 
 # Import our modular components
 from models import UnifiedCalculationRequest, UnifiedCalculationResponse
@@ -19,16 +21,19 @@ from utils.generate_previews import (
     b64, generate_preview_images_sync, png_placeholder,
     PREVIEW_SUPPORTED_EXT
 )
-from utils.response_utils import ResponseWrapper, add_response_metadata
+from utils.response_utils import ResponseWrapper
 from utils.logging_utils import get_logger, set_request_id
 from utils.middleware import RequestTrackingMiddleware
 from utils.versioning import VersioningMiddleware, get_version_info
 from utils.validation_utils import validate_calculation_request, create_validation_error_response
 from constants import (
-    MATERIALS, LOCATIONS, COVER, TOLERANCE, 
+    MATERIALS_UPDATE_TIMER_SEC, COVER, TOLERANCE, 
     FINISH, CONTROL_TYPES, CERT_COSTS, AUTO_SERVICES, NON_AUTO_SERVICES,
     OTHER_SERVICES, APP_VERSION
 )
+from commercial_constants import LOCATIONS
+import MATERIALS_gen # for materials_reimport() correct work
+from MATERIALS_gen import MATERIALS
 from utils.electroplating_config import (
     ELECTROPLATING_SERVICE_ID,
     NON_AUTO_ELECTROPLATING_SERVICE,
@@ -49,13 +54,43 @@ os.environ["PYOPENGL_PLATFORM"] = "osmesa"
 # Configure logging
 logger = get_logger(__name__)
 
+
+# MATERIALS update/reimport task
+async def materials_reimport():
+    global MATERIALS
+    while True:
+        try:
+            importlib.reload(MATERIALS_gen)
+            from MATERIALS_gen import MATERIALS
+            await asyncio.sleep(MATERIALS_UPDATE_TIMER_SEC)
+        except asyncio.CancelledError:
+            logger.info("materials_reimport() has stopped.")
+            break
+        except (SyntaxError, PermissionError): # reading file under writing
+            logger.error("MATERIALS_gen reloading error: SyntaxError or PermissionError")
+            await asyncio.sleep(1)
+        except Exception as e:
+            logger.exception(f"materials_reimport() exception: {e}")
+            await asyncio.sleep(5) # avoid busy loop
+
+# configure lifespan
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    materials_update_task = asyncio.create_task(materials_reimport())
+    yield
+    materials_update_task.cancel()
+    await asyncio.gather(materials_update_task, return_exceptions=True)
+
+
+
 # Create FastAPI app
 app = FastAPI(
     title=f"Manufacturing Calculation API v{APP_VERSION}",
     description="Unified API for manufacturing cost calculations with file upload support",
     version=APP_VERSION,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan = lifespan
 )
 
 # Add CORS middleware
@@ -129,13 +164,59 @@ async def calculate_price(request: UnifiedCalculationRequest):
         request_id=getattr(request, 'request_id', None)
     )
 
+    from calculations.core import clear_material_snapshot, set_material_snapshot
+    if request.material_snapshot and request.material_id:
+        set_material_snapshot(request.material_id, request.material_snapshot)
+
+    try:
+        return await _calculate_price_impl(request, start_time)
+    finally:
+        clear_material_snapshot()
+
+
+async def _calculate_price_impl(request: UnifiedCalculationRequest, start_time: float):
+    """Inner calculate-price body (material snapshot context already set)."""
+    import time
+    from utils.logging_utils import log_calculation_complete, log_error
+
     AUTO_SERVICES_LIST = [v["service"] for v in AUTO_SERVICES.values()]
-    
+    OTHER_SERVICES_LIST = [v["service"] for v in OTHER_SERVICES.values()]
+
+    if request.service_id in OTHER_SERVICES_LIST:
+        logger.info("Manual pricing service request: %s", request.service_id)
+        result = UnifiedCalculationResponse(
+            service_id=request.service_id,
+            part_price=0,
+            detail_price=0,
+            part_price_one=0,
+            detail_price_one=0,
+            total_price=0,
+            total_time=0,
+            calculation_method="manual_pricing"
+        )
+        return ResponseWrapper.success_response(
+            data=result.model_dump(),
+            message=(
+                f"Manual pricing request accepted for {request.service_id}. "
+                "Automatic price is zero by design."
+            ),
+            request_id=getattr(request, 'request_id', None)
+        )
+
+    if request.service_id not in AUTO_SERVICES_LIST:
+        return ResponseWrapper.calculation_error(
+            message=(
+                f"service_id={request.service_id!r} is not configured for automatic price calculation. "
+                "Only services from OTHER_SERVICES are accepted as successful zero-price manual requests."
+            ),
+            request_id=getattr(request, 'request_id', None)
+        )
+
     if request.service_id == "cnc-milling" and request.file_data is None:
         return ResponseWrapper.calculation_error(
             message=(
                 "file_data is required for ML-based service_id='cnc-milling'. "
-                "Rule-based CNC milling fallback was removed."
+                "CNC milling is ML-only in the current runtime."
             ),
             request_id=getattr(request, 'request_id', None)
         )
@@ -149,25 +230,7 @@ async def calculate_price(request: UnifiedCalculationRequest):
             request_id=getattr(request, 'request_id', None)
         )
 
-    if request.service_id not in AUTO_SERVICES_LIST:
-        logger.info("Default request!")
-        result = UnifiedCalculationResponse(
-            service_id=request.service_id,
-            part_price=0,
-            detail_price=0,
-            part_price_one=0,
-            detail_price_one=0,
-            total_price=0,
-            total_time=0,
-            calculation_method="rule_based"
-        )
-        return ResponseWrapper.success_response(
-            data=result.model_dump(),
-            message=f"Calculation completed successfully for {request.service_id}",
-            request_id=getattr(request, 'request_id', None)
-        )
-
-    # Validate request before processing
+    # Validate automatic-pricing requests before processing.
     request_data = request.model_dump(exclude_unset=True, exclude_none=True)
     validation_errors = validate_calculation_request(request_data)
     
@@ -351,7 +414,7 @@ def _material_form_response_items(
     material_info: Dict[str, Any],
     service_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Build material_form options from constants.MATERIALS only."""
+    """Build material_form options from MATERIALS_gen.MATERIALS only."""
     forms = get_allowed_material_forms(material_info)
     result: List[Dict[str, Any]] = []
     for form_id, form_info in sorted(forms.items(), key=lambda item: item[0]):
@@ -542,7 +605,7 @@ async def list_services():
 
 
 @app.get("/auto_services", tags=["Configuration"])
-async def list_services():
+async def list_auto_services():
     """
     List available manufacturing services
     with auto price calculation
@@ -554,7 +617,7 @@ async def list_services():
 
 
 @app.get("/other_services", tags=["Configuration"])
-async def list_locations():
+async def list_other_services():
     """
     List available other manufacturing services 
     for other_services page
@@ -605,7 +668,7 @@ async def list_coefficients():
 
 
 @app.get("/locations", tags=["Configuration"])
-async def list_locations():
+async def list_locations_endpoint():
     """List available manufacturing locations"""
     data = {
         "locations": [{"id": k, **v} for k, v in LOCATIONS.items()]
@@ -668,6 +731,12 @@ async def list_operations_available(service_id: str):
             return ResponseWrapper.success_response(data, "Operations retrieved successfully")
 
     return ResponseWrapper.success_response({"values": []}, "Operations retrieved successfully")
+
+
+from utils.metrics import setup_prometheus
+
+setup_prometheus(app)
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -8,10 +8,8 @@ def test_invalid_material_for_printing(client):
             "height": 10
         },
         "quantity": 1,
-        "material_id": "alum_D16",
+        "material_id": "non_ferrous_Д16",
         "material_form": "sheet",
-        "k_type": 1.0,
-        "k_process": 1.0,
         "cover_id": ["1"],
         "k_cert": ["a"]
     }

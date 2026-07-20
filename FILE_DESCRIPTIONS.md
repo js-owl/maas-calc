@@ -19,8 +19,8 @@ This document provides concise descriptions of all files in the Manufacturing Ca
 - **`Dockerfile`** - Production Docker image configuration
 - **`Dockerfile.dev`** - Development Docker image with hot reload
 - **`docker-compose.yml`** - Basic Docker Compose configuration
-- **`docker-compose.dev.yml`** - Development environment with volume mounts
-- **`docker-compose.prod.yml`** - Production environment with Caddy reverse proxy
+- **`docker-compose.local.yml`** - Development environment with volume mounts
+- **`docker-compose.yml`** - Production environment with Caddy reverse proxy
 - **`Caddyfile`** - Caddy web server configuration for reverse proxy
 - **`.dockerignore`** - Files to exclude from Docker builds
 - **`DOCKER.md`** - Comprehensive Docker deployment documentation
@@ -212,8 +212,8 @@ Both STL and STP extractors prepare features for ML prediction:
 ### Configuration Management
 - **Constants**: `constants.py` centralizes all configuration data
 - **Materials**: Material properties, prices, and process compatibility
-- **Machines**: Available manufacturing equipment and capabilities
-- **Locations**: Cost structures and pricing by location
+- **Machines**: Available manufacturing equipment and capabilities (in `commercial_constants.py`, centralizes all vulnerable data)
+- **Locations**: Cost structures and pricing by location (in `commercial_constants.py`, centralizes all vulnerable data)
 
 ### Testing & Quality
 - **Comprehensive Tests**: Full test coverage for all endpoints and scenarios

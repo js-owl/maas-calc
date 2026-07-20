@@ -73,7 +73,7 @@ python run_tests.py --category all --url http://your-api-server:7000
 - **Coefficients List** - Get tolerance, finish, and cover options
 
 ### 2. Manufacturing Calculation Tests
-- **3D Printing** - Test with PA11 and PA12 materials
+- **3D Printing** - Test with plastic_ABS and plastic_PETG materials
 - **CNC Milling** - Test with aluminum materials and various tolerances
 - **CNC Lathe** - Test with rod materials and different finishes
 - **Painting** - Test with different paint types and processes
@@ -91,8 +91,8 @@ python run_tests.py --category all --url http://your-api-server:7000
 - **Missing Required Fields** - Test with incomplete requests
 
 ### 5. Comprehensive Material Tests
-- **PA11 vs PA12** - Compare different plastic materials
-- **Aluminum Variants** - Test alum_D16 vs alum_AMC
+- **plastic_ABS vs plastic_PETG** - Compare different plastic materials
+- **Aluminum Variants** - Test non_ferrous_Д16 vs non_ferrous_АМц
 - **Material Forms** - Test different material forms (powder, sheet, rod)
 
 ### 6. Tolerance and Finish Tests
@@ -116,10 +116,10 @@ python run_tests.py --category all --url http://your-api-server:7000
 All test examples use real values from `constants.py`:
 
 ### Materials
-- **PA11** - Порошок PA11 (plastic powder)
-- **PA12** - Порошок PA12 (plastic powder)
-- **alum_D16** - Алюминий Д16 (aluminum D16)
-- **alum_AMC** - Алюминий АМц (aluminum AMC)
+- **plastic_ABS** - Филамент plastic_ABS (plastic thread)
+- **plastic_PETG** - Филамент plastic_PETG (plastic thread)
+- **non_ferrous_Д16** - Алюминий Д16 (aluminum D16)
+- **non_ferrous_АМц** - Алюминий АМц (aluminum AMC)
 
 ### Tolerances
 - **1** - IT7 (highest precision)
@@ -172,8 +172,8 @@ Request Data: {
     "thickness": 10.0
   },
   "quantity": 5,
-  "material_id": "PA11",
-  "material_form": "powder"
+  "material_id": "plastic_ABS",
+  "material_form": "thread"
 }
 Status Code: 200
 ✅ SUCCESS

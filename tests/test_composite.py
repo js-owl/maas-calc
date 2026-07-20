@@ -20,7 +20,7 @@ class _FakeTrainer:
 def test_composite_material_cost_uses_layer_thickness_and_margin():
     calc = MLCompositeCalculator()
     request = SimpleNamespace(
-        material_id="pre-preg_v180",
+        material_id="composite_Э1",
         material_form="textile",
         ml_features={"volume": 1000000.0},
     )
@@ -28,7 +28,7 @@ def test_composite_material_cost_uses_layer_thickness_and_margin():
     costs = calc._calculate_composite_material_costs(request)
 
     assert costs["one_layer_thickness_mm"] == 0.2
-    assert costs["price_per_square_meter"] == 4930.0
+    assert costs["price_per_square_meter"] == 195.0
     assert costs["layer_count"] == 6
     assert costs["volume_with_margin_m3"] == 0.0011
     assert costs["required_stack_thickness_mm"] == 1.1
@@ -52,7 +52,7 @@ def test_ml_composite_calculator_returns_composite_response(monkeypatch):
             "obb_z": 20.0,
             "dimensions": None,
         },
-        material_id="pre-preg_v180",
+        material_id="composite_Э1",
         material_form="textile",
         location="location_1",
         quantity=2,
@@ -141,7 +141,7 @@ def test_ml_composite_calculator_adds_special_equipment_price(monkeypatch):
             "obb_z": 20.0,
             "dimensions": None,
         },
-        material_id="pre-preg_v180",
+        material_id="composite_Э1",
         material_form="textile",
         location="location_1",
         quantity=2,

@@ -22,7 +22,7 @@ def test_ml_material_cost_distributes_moq_over_quantity(monkeypatch):
 
     monkeypatch.setattr(
         "calculators.ml_calculator.get_material_info",
-        lambda material_id, material_form: {
+        lambda material_id, material_form, service_id='': {
             "price": 100.0,
             "density": 2727.272727,  # 100x100x100 mm * 1.1 => about 3 kg
             "minimum_order_quantity": 10.0,

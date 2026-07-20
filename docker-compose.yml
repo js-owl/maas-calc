@@ -1,8 +1,9 @@
+# Server deploy (dev + prod): image tag and registry set by GitLab CI sed + .env.
+# Environment: DEV and PROD SERVERS — not for local machine.
+# Usage on server: docker compose -f docker-compose.yml pull && docker compose -f docker-compose.yml up -d
+
 services:
   backend-calc:
-    #build:
-    #  context: .
-    #  dockerfile: Dockerfile
     image: ${NEXUS_PUSH_IMAGE:-nexus.maas.int.kronshtadt.ru:8443/maas-hosted/maas-prod-stl:latest}
     container_name: backend-calc
     ports:
