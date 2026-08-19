@@ -115,7 +115,7 @@ ServiceType_validation_dict: Dict[MaterialNameMain, List[ServiceType]] = {
 class ElectroplatingFamily(str, Enum):
     CARBON = "carbon_steel"
     STAINLESS = "stainless_steel"
-    ALUMINIUM = "aluminum"
+    ALUMINUM = "aluminum"
     COPPER = "copper"
     TITANIUM = "titanium"
     MAGNESIUM = "magnesium"
@@ -124,7 +124,7 @@ class ElectroplatingFamily(str, Enum):
 class MaterialFamily(str, Enum):
     CARBON = "carbon_steel" # "углеродистая"
     STAINLESS = "stainless_steel" # "легированная"
-    ALUMINIUM = "aluminium" # "алюминий"
+    ALUMINUM = "aluminum" # "алюминий"
     COPPER = "copper" # "медь"
     TITANIUM = "titanium" # "титан"
     MAGNESIUM = "magnesium" # "магний"
@@ -139,7 +139,7 @@ class MaterialFamily(str, Enum):
 # MaterialFamily obj value should be in Dict[MaterialName] list
 MaterialFamily_validation_dict: Dict[MaterialNameMain, List[MaterialFamily]] = {
     MaterialNameMain.STEEL:       [ MaterialFamily.CARBON, MaterialFamily.STAINLESS, ],
-    MaterialNameMain.NON_FERROUS: [ MaterialFamily.ALUMINIUM,
+    MaterialNameMain.NON_FERROUS: [ MaterialFamily.ALUMINUM,
                                     MaterialFamily.BRONZE,
                                     MaterialFamily.LATUN,
                                     MaterialFamily.COPPER,

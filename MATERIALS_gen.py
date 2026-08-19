@@ -21,6 +21,40 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
         "material_name_main": "other",
         "material_group": "other"
     },
+    "plastic_PA11": {
+        "label": "Пластик PA11",
+        "family": "plastic_3d",
+        "electroplating_family": "plastic_3d",
+        "density": 1020.0,
+        "applicable_processes": [ "printing" ],
+        "material_name": "PA11",
+        "material_name_main": "plastic",
+        "minimum_order_quantity": 10.0,
+        "forms": {
+            "powder": {
+                "price": 9250.00,
+                "price_units": [ "kg" ],
+                "applicable_processes": [ "printing" ]
+            }
+        }
+    },
+    "plastic_PA12": {
+        "label": "Пластик PA12",
+        "family": "plastic_3d",
+        "electroplating_family": "plastic_3d",
+        "density": 930.0,
+        "applicable_processes": [ "printing" ],
+        "material_name": "PA12",
+        "material_name_main": "plastic",
+        "minimum_order_quantity": 10.0,
+        "forms": {
+            "powder": {
+                "price": 6500.00,
+                "price_units": [ "kg" ],
+                "applicable_processes": [ "printing" ]
+            }
+        }
+    },
     "steel_Ст30": {
         "label": "Сталь Ст30",
         "family": "carbon_steel",
@@ -329,8 +363,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     },
     "non_ferrous_АМг2": {
         "label": "Цветные металлы АМг2",
-        "family": "aluminium",
-        "electroplating_family": "aluminium",
+        "family": "aluminum",
+        "electroplating_family": "aluminum",
         "density": 2690.0,
         "applicable_processes": [ "cnc-milling", "electroplating_auto" ],
         "material_name": "АМг2",
@@ -352,8 +386,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     },
     "non_ferrous_АМг3": {
         "label": "Цветные металлы АМг3",
-        "family": "aluminium",
-        "electroplating_family": "aluminium",
+        "family": "aluminum",
+        "electroplating_family": "aluminum",
         "density": 2690.0,
         "applicable_processes": [ "cnc-milling", "electroplating_auto" ],
         "material_name": "АМг3",
@@ -380,8 +414,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     },
     "non_ferrous_АМг6": {
         "label": "Цветные металлы АМг6",
-        "family": "aluminium",
-        "electroplating_family": "aluminium",
+        "family": "aluminum",
+        "electroplating_family": "aluminum",
         "density": 2650.0,
         "applicable_processes": [ "cnc-milling", "electroplating_auto" ],
         "material_name": "АМг6",
@@ -450,8 +484,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     },
     "non_ferrous_Д16": {
         "label": "Цветные металлы Д16",
-        "family": "aluminium",
-        "electroplating_family": "aluminium",
+        "family": "aluminum",
+        "electroplating_family": "aluminum",
         "density": 2800.0,
         "applicable_processes": [ "cnc-milling", "electroplating_auto" ],
         "material_name": "Д16",
@@ -478,8 +512,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     },
     "non_ferrous_Д16Т": {
         "label": "Цветные металлы Д16Т",
-        "family": "aluminium",
-        "electroplating_family": "aluminium",
+        "family": "aluminum",
+        "electroplating_family": "aluminum",
         "density": 2800.0,
         "applicable_processes": [ "cnc-milling", "electroplating_auto" ],
         "material_name": "Д16Т",
@@ -634,8 +668,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     },
     "non_ferrous_АК4": {
         "label": "Цветные металлы АК4",
-        "family": "aluminium",
-        "electroplating_family": "aluminium",
+        "family": "aluminum",
+        "electroplating_family": "aluminum",
         "density": 2790.0,
         "applicable_processes": [ "cnc-milling", "electroplating_auto" ],
         "material_name": "АК4",
@@ -1076,8 +1110,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     },
     "non_ferrous_АД1": {
         "label": "Цветные металлы АД1",
-        "family": "aluminium",
-        "electroplating_family": "aluminium",
+        "family": "aluminum",
+        "electroplating_family": "aluminum",
         "density": 2700.0,
         "applicable_processes": [ "cnc-milling", "electroplating_auto" ],
         "material_name": "АД1",
@@ -1100,8 +1134,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     },
     "non_ferrous_АМц": {
         "label": "Цветные металлы АМц",
-        "family": "aluminium",
-        "electroplating_family": "aluminium",
+        "family": "aluminum",
+        "electroplating_family": "aluminum",
         "density": 2780.0,
         "applicable_processes": [ "cnc-milling", "electroplating_auto" ],
         "material_name": "АМц",
@@ -1166,8 +1200,8 @@ MATERIALS: Dict[str, Dict[str, Any]] = {
     },
     "non_ferrous_Д1АМ": {
         "label": "Цветные металлы Д1АМ",
-        "family": "aluminium",
-        "electroplating_family": "aluminium",
+        "family": "aluminum",
+        "electroplating_family": "aluminum",
         "density": 2800.0,
         "applicable_processes": [ "cnc-milling", "electroplating_auto" ],
         "material_name": "Д1АМ",

@@ -30,7 +30,7 @@ def clear_material_snapshot() -> None:
     _material_snapshot_ctx.set(None)
 
 
-def _lookup_material(material_id: str) -> Dict[str, Any]:
+def lookup_material(material_id: str) -> Dict[str, Any]:
     override = _material_snapshot_ctx.get()
     if override and override[0] == material_id and isinstance(override[1], dict):
         return override[1]
@@ -41,7 +41,6 @@ def calculate_mat_volume(length: float, width: float, height: float) -> float:
     """Calculate material volume in cubic meters"""
     volume = 0.000000001 * length * width * height
     return round(volume, 10)
-
 
 
 def calculate_mat_weight(volume: float, density: float) -> float:
@@ -117,7 +116,7 @@ def resolve_priced_material_form(
     to the service and has a positive price; otherwise it falls back to the
     first applicable form with a positive price.
     """
-    material = _lookup_material(material_id)
+    material = lookup_material(material_id)
     forms = material.get("forms") or {}
     if not forms:
         return None
@@ -150,7 +149,7 @@ def resolve_priced_material_form(
 def resolve_material(material_id: str, material_form: Union[str, MaterialForm], process: str) -> Dict[str, Any]:
     """Resolve material properties by id and form; validate form and process compatibility.
     Raises HTTPException 422 on invalid input."""
-    material_data = _lookup_material(material_id)
+    material_data = lookup_material(material_id)
     if not material_data and material_id not in MATERIALS:
         raise HTTPException(status_code=422, detail=f"Unknown material_id '{material_id}'. Use /materials to list options.")
     mat = material_data or MATERIALS[material_id]
@@ -454,7 +453,7 @@ def get_material_info(material_id: str, material_form: str, service_id: str = ""
     returning zero material price for materials that are priced as rod while the
     frontend sends the historical default form sheet.
     """
-    material_data = _lookup_material(material_id)
+    material_data = lookup_material(material_id)
     forms = material_data.get("forms") or {}
     requested_material_form = _as_form_key(material_form)
     resolved_material_form = resolve_priced_material_form(material_id, material_form, service_id) or requested_material_form

@@ -17,6 +17,7 @@ from itertools import permutations
 from typing import Any, Dict, Mapping, Optional
 
 from constants import DEFAULT_ELECTROPLATING_PROCESS_ID, ELECTROPLATING_BATH_CLEARANCE_MM
+from models.base_models import MaterialFamily
 
 ELECTROPLATING_SERVICE_ID = "electroplating_auto"
 NON_AUTO_ELECTROPLATING_SERVICE = "electroplating"
@@ -530,12 +531,12 @@ PROCESS_PROFILE_LIBRARY: Dict[str, Dict[str, Any]] = {
 }
 
 ELECTROPLATING_MATERIAL_FAMILIES: Dict[str, Dict[str, Any]] = {
-    'carbon_steel': {'label': 'Углеродистые стали', 'density_kg_dm3': 7.8},
-    'stainless_steel': {'label': 'Коррозионностойкие стали', 'density_kg_dm3': 7.8},
-    'aluminum': {'label': 'Алюминиевые сплавы', 'density_kg_dm3': 2.7},
-    'copper': {'label': 'Медь и медные сплавы', 'density_kg_dm3': 8.93},
-    'titanium': {'label': 'Титановые сплавы', 'density_kg_dm3': 4.5},
-    'magnesium': {'label': 'Магниевые сплавы', 'density_kg_dm3': 1.8}
+    MaterialFamily.CARBON.value: {'label': 'Углеродистые стали', 'density_kg_dm3': 7.8},
+    MaterialFamily.STAINLESS.value: {'label': 'Коррозионностойкие стали', 'density_kg_dm3': 7.8},
+    MaterialFamily.ALUMINUM.value: {'label': 'Алюминиевые сплавы', 'density_kg_dm3': 2.7},
+    MaterialFamily.COPPER.value: {'label': 'Медь и медные сплавы', 'density_kg_dm3': 8.93},
+    MaterialFamily.TITANIUM.value: {'label': 'Титановые сплавы', 'density_kg_dm3': 4.5},
+    MaterialFamily.MAGNESIUM.value: {'label': 'Магниевые сплавы', 'density_kg_dm3': 1.8}
 }
 
 ELECTROPLATING_DEFAULTS: Dict[str, Any] = {
@@ -1060,7 +1061,7 @@ def get_material_families_for_process(process_id: Optional[str] = None) -> Dict[
 
 
 def infer_material_family(material_id: str, material_info: Mapping[str, Any]) -> str:
-    """Return explicit galvanic material family configured in MATERIALS_gen.MATERIALS.
+    """Return explicit galvanic material family configured in material_info.
 
     The historical function name is kept to avoid touching all imports, but this
     is no longer a heuristic. Every material must define electroplating_family.
@@ -1068,7 +1069,7 @@ def infer_material_family(material_id: str, material_info: Mapping[str, Any]) ->
     """
     if "electroplating_family" not in material_info:
         raise ValueError(
-            f"MATERIALS[{material_id!r}]['electroplating_family'] is not configured. "
+            f"for material_id {material_id!r} material_info['electroplating_family'] is not configured. "
             "Set an explicit family or None for non-galvanic materials."
         )
     family_id = normalize_material_family_id(material_info.get("electroplating_family"))
@@ -1093,7 +1094,7 @@ def is_material_allowed_for_electroplating_process(
     """Return whether a material is allowed for a concrete galvanic operation.
 
     This is intentionally based only on the explicit electroplating_family field
-    in MATERIALS_gen.MATERIALS and the explicit material_families binding of the
+    in material_info and the explicit material_families binding of the
     operation in ELECTROPLATING_OPERATION_PROFILES. No text heuristics are used.
     """
     process = get_electroplating_process(process_id)
@@ -1116,7 +1117,7 @@ def get_allowed_material_forms(material_info: Mapping[str, Any]) -> Dict[str, Di
 
     For electroplating_auto the form is a compatibility/input field, not a
     process selector. Therefore the only safe source of allowed values is
-    MATERIALS[material_id]["forms"].
+    material_info["forms"].
     """
     forms = material_info.get("forms") or {}
     if not isinstance(forms, Mapping):

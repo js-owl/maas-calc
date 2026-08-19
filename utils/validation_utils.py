@@ -8,10 +8,10 @@ from constants import (
     ERROR_MESSAGES, ERROR_CODES, TOLERANCE, FINISH, COVER,
     AUTO_SERVICES, NON_AUTO_SERVICES, OTHER_SERVICES
 )
-from MATERIALS_gen import MATERIALS
+# from MATERIALS_gen import MATERIALS
 from utils.logging_utils import get_logger
 from utils.response_utils import ResponseWrapper
-from calculations.core import resolve_priced_material_form
+from calculations.core import resolve_priced_material_form, lookup_material
 from utils.electroplating_config import (
     ELECTROPLATING_SERVICE_ID,
     get_electroplating_process,
@@ -56,16 +56,9 @@ class Validator:
             )
     
     @staticmethod
-    def validate_material_id(material_id: str, service_id: str) -> None:
+    def validate_material_id(material_id: str, service_id: str, material_info: Dict[str, Any]) -> None:
         """Validate material ID and its applicability to service."""
-        if material_id not in MATERIALS:
-            raise ValidationError(
-                field="material_id",
-                message=ERROR_MESSAGES["invalid_material"],
-                value=material_id
-            )
-
-        material_info = MATERIALS[material_id]
+ 
         applicable_processes = material_info.get("applicable_processes", [])
 
         if service_id == ELECTROPLATING_SERVICE_ID:
@@ -95,12 +88,8 @@ class Validator:
             )
 
     @staticmethod
-    def validate_material_form(material_id: str, material_form: str, service_id: str = "") -> None:
+    def validate_material_form(material_id: str, material_form: str, service_id: str, material_info: Dict[str, Any]) -> None:
         """Validate material form for the selected material and service."""
-        if material_id not in MATERIALS:
-            return  # Will be caught by material_id validation
-
-        material_info = MATERIALS[material_id]
         forms = material_info.get("forms", {})
 
         if material_form not in forms:
@@ -287,17 +276,22 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
         Validator.validate_service_id(request_data.get("service_id", ""))
     except ValidationError as e:
         errors.append(e)
-    
+
+    material_id = request_data.get("material_id", "")
+    material_info = lookup_material(material_id)
+
     # Validate material if provided
     if "material_id" in request_data:
         try:
+            # Validator.validate_material_id(request_data)
             Validator.validate_material_id(
                 request_data["material_id"], 
-                request_data.get("service_id", "")
+                request_data.get("service_id", ""),
+                request_data.get("material_snapshot", material_info),
             )
         except ValidationError as e:
             errors.append(e)
-    
+
     # Validate material form if provided
     if "material_id" in request_data and "material_form" in request_data:
         try:
@@ -305,6 +299,7 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
                 request_data["material_id"],
                 request_data["material_form"],
                 request_data.get("service_id", ""),
+                request_data.get("material_snapshot", material_info),
             )
         except ValidationError as e:
             errors.append(e)
@@ -355,7 +350,6 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
                 errors.append(e)
 
         requested_family = request_data.get("electroplating_family")
-        material_id = request_data.get("material_id")
         resolved_family = None
 
         if requested_family:
@@ -365,15 +359,16 @@ def validate_calculation_request(request_data: Dict[str, Any]) -> List[Validatio
             except ValidationError as e:
                 errors.append(e)
 
-        if material_id in MATERIALS:
+        # if material_id in MATERIALS:
+        if material_info:
             try:
-                material_family_from_material = infer_material_family(material_id, MATERIALS[material_id])
+                material_family_from_material = infer_material_family(material_id, material_info)
                 if resolved_family and material_family_from_material != resolved_family:
                     raise ValidationError(
                         field="electroplating_family",
                         message=(
                             f"electroplating_family={resolved_family} does not match "
-                            f"MATERIALS[{material_id!r}]['electroplating_family']={material_family_from_material}"
+                            f"for material_id {material_id!r} material_info['electroplating_family']={material_family_from_material}"
                         ),
                         value=requested_family,
                     )

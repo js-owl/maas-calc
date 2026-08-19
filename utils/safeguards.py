@@ -13,10 +13,10 @@ import logging
 from typing import Dict, Any, Optional
 
 from constants import DEFAULTS, PRINTING_LOCATION
-from MATERIALS_gen import MATERIALS
+# from MATERIALS_gen import MATERIALS
 from models.base_models import Dimensions
 from utils.electroplating_config import ELECTROPLATING_SERVICE_ID
-from calculations.core import resolve_priced_material_form
+from calculations.core import resolve_priced_material_form, lookup_material
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,8 @@ class SafeguardManager:
 
     def _default_material_form(self, material_id: str, service_id: str = "") -> Optional[str]:
         """Return the first material form applicable to the service, if any."""
-        material = MATERIALS.get(material_id) or {}
+        # material = MATERIALS.get(material_id) or {}
+        material = lookup_material(material_id)
         forms = material.get("forms") or {}
         if not forms:
             return None
@@ -85,7 +86,8 @@ class SafeguardManager:
     ) -> Optional[str]:
         """Replace an invalid material form with the first valid form for this material."""
         try:
-            material = MATERIALS.get(material_id) or {}
+            # material = MATERIALS.get(material_id) or {}
+            material = lookup_material(material_id)
             forms = material.get("forms") or {}
             allowed_forms = list(forms.keys())
             resolved_form = resolve_priced_material_form(material_id, material_form, service_id)

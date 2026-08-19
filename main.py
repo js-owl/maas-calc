@@ -414,7 +414,7 @@ def _material_form_response_items(
     material_info: Dict[str, Any],
     service_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Build material_form options from MATERIALS_gen.MATERIALS only."""
+    """Build material_form options from incoming material_info"""
     forms = get_allowed_material_forms(material_info)
     result: List[Dict[str, Any]] = []
     for form_id, form_info in sorted(forms.items(), key=lambda item: item[0]):
@@ -470,7 +470,7 @@ async def list_electroplating_material_families(
     }
     return ResponseWrapper.success_response(data, "Electroplating material families retrieved successfully")
 
-
+# deprecated: stl is not materials info source
 @app.get("/materials", tags=["Configuration"])
 async def list_materials(
     process: Optional[str] = None,

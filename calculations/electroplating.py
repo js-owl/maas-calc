@@ -125,7 +125,7 @@ def resolve_material_family_for_electroplating(
     if fallback_family_id and fallback_family_id != requested_family_id:
         raise ValueError(
             f"electroplating_family={requested_family_id!r} does not match "
-            f"MATERIALS[{material_id!r}]['electroplating_family']={fallback_family_id!r}"
+            f"for material_id {material_id!r} material_info['electroplating_family']={fallback_family_id!r}"
         )
 
     family = get_electroplating_material_family(requested_family_id)

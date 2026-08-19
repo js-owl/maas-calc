@@ -53,6 +53,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install development and testing dependencies
 COPY requirements-dev.txt .
 RUN pip install --no-cache-dir -r requirements-dev.txt
+RUN pip install --no-cache-dir debugpy
 
 # Create necessary directories
 RUN mkdir -p /app/uploads /app/logs
@@ -67,3 +68,6 @@ EXPOSE 7000
 
 # Run the application with hot reload
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7000", "--reload"]
+# CMD ["python", "-m", "debugpy", "--listen", "0.0.0.0:5679", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7000", "--reload"]
+
+

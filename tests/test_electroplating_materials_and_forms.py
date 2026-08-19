@@ -19,7 +19,7 @@ from utils.validation_utils import validate_calculation_request
 def test_material_families_are_explicit_and_composites_are_not_applicable():
     assert infer_material_family("steel_40Х13", MATERIALS["steel_40Х13"]) == "carbon_steel"
     assert infer_material_family("steel_12Х18Н10Т", MATERIALS["steel_12Х18Н10Т"]) == "stainless_steel"
-    assert infer_material_family("non_ferrous_Д16", MATERIALS["non_ferrous_Д16"]) == "aluminium"
+    assert infer_material_family("non_ferrous_Д16", MATERIALS["non_ferrous_Д16"]) == "aluminum"
     assert infer_material_family("non_ferrous_Л63", MATERIALS["non_ferrous_Л63"]) == "latun"
     # assert infer_material_family("composite_Т10", MATERIALS["composite_Т10"]) == NOT_APPLICABLE_ELECTROPLATING_FAMILY
     assert not is_material_allowed_for_electroplating("composite_Т10", MATERIALS["composite_Т10"])

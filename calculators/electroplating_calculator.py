@@ -8,11 +8,11 @@ from typing import Any, Dict
 from fastapi import HTTPException
 
 from .base_calculator import BaseCalculator
-from calculations.core import build_unified_unit_price, calculate_k_quantity
+from calculations.core import build_unified_unit_price, calculate_k_quantity, resolve_material
 from calculations.electroplating import calculate_electroplating_parameters
 from constants import VAT_RATE
 from commercial_constants import COST_STRUCTURE
-from MATERIALS_gen import MATERIALS
+# from MATERIALS_gen import MATERIALS
 from models.calculation_models import ElectroplatingCalculationRequest
 from models.response_models import UnifiedCalculationResponse
 from utils.electroplating_config import ELECTROPLATING_SERVICE_ID
@@ -39,7 +39,9 @@ class ElectroplatingAutoCalculator(BaseCalculator):
 
             material_info = None
             if request.material_id:
-                material_info = MATERIALS.get(request.material_id)
+                # material_info = MATERIALS.get(request.material_id)
+                material_form = request.material_form if request.material_form else ""
+                material_info = resolve_material(request.material_id, material_form, request.service_id)
                 if not material_info:
                     raise ValueError(f"Unknown material_id: {request.material_id!r}")
 

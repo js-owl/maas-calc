@@ -5,12 +5,14 @@ Helper functions for accessing configuration data
 from typing import Dict, Any, Optional
 from constants import COVER, TOLERANCE, FINISH
 from commercial_constants import LOCATIONS
-from MATERIALS_gen import MATERIALS
+# from MATERIALS_gen import MATERIALS
+from calculations.core import lookup_material
 
 
 def get_material_info(material_id: str) -> Dict[str, Any]:
     """Get material information by ID"""
-    return MATERIALS.get(material_id, {})
+    # return MATERIALS.get(material_id, {})
+    return lookup_material(material_id)
 
 
 def get_location_info(location_id: str) -> Dict[str, Any]:
@@ -33,13 +35,13 @@ def get_finish_info(finish_id: str) -> Dict[str, Any]:
     return FINISH.get(finish_id, {})
 
 
-def get_material_by_process(process: str) -> Dict[str, Dict[str, Any]]:
-    """Get all materials applicable to a specific process"""
-    return {
-        material_id: material_info 
-        for material_id, material_info in MATERIALS.items()
-        if process in material_info.get("applicable_processes", [])
-    }
+# def get_material_by_process(process: str) -> Dict[str, Dict[str, Any]]:
+#     """Get all materials applicable to a specific process"""
+#     return {
+#         material_id: material_info 
+#         for material_id, material_info in MATERIALS.items()
+#         if process in material_info.get("applicable_processes", [])
+#     }
 
 
 def get_cover_processing_list() -> list:

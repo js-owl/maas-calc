@@ -16,3 +16,5 @@ mypy
 ipython
 jupyter
 
+# Debugger
+debugpy
