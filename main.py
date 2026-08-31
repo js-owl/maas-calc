@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 
 # Import our modular components
 from models import UnifiedCalculationRequest, UnifiedCalculationResponse
+from models.request_models import PriceRecalculationRequest
 from utils import ParameterExtractor, SafeguardManager, CalculationRouter
 from utils.generate_previews import (
     b64, generate_preview_images_sync, png_placeholder,
@@ -172,6 +173,35 @@ async def calculate_price(request: UnifiedCalculationRequest):
         return await _calculate_price_impl(request, start_time)
     finally:
         clear_material_snapshot()
+
+
+@app.post("/recalculate-price", tags=["Manufacturing Calculations"])
+async def recalculate_price(
+    request: PriceRecalculationRequest,
+    changed_field: str = Query(
+        ...,
+        description=(
+            "Dot-separated path of the value edited by the caller, for example "
+            "total_price_breakdown.work_price"
+        ),
+    ),
+):
+    """Recalculate all price values that depend on one edited snapshot field."""
+    from calculations.core import recalculate_price_snapshot
+
+    try:
+        result = recalculate_price_snapshot(request.model_dump(), changed_field)
+    except ValueError as exc:
+        return ResponseWrapper.validation_error(
+            field="changed_field",
+            message=str(exc),
+            value=changed_field,
+        )
+
+    return ResponseWrapper.success_response(
+        data=result,
+        message=f"Price recalculated from {changed_field}",
+    )
 
 
 async def _calculate_price_impl(request: UnifiedCalculationRequest, start_time: float):

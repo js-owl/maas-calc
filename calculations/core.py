@@ -11,7 +11,8 @@ from constants import (
     CYCLE_TIME_DEFAULTS, ERROR_MESSAGES,
     MATERIAL_MARKUP_RATE, PRINTING_VOLUME_SPEED_L_PER_HOUR,
     PRINTING_PREPARATION_TIME_HOURS,
-    QUANTITY_DISCOUNT_CONTROL_POINTS, VAT_RATE,
+    PRINTING_LOCATION, QUANTITY_DISCOUNT_CONTROL_POINTS, VAT_RATE,
+    FINISH, TOLERANCE,
 )
 from models.base_models import MaterialForm
 from MATERIALS_gen import MATERIALS
@@ -374,6 +375,365 @@ def build_unified_unit_price(
         "total_price_breakdown": price_breakdown,
         "detail_price_calculation": detail_price_calculation,
     }
+
+
+def recalculate_price_snapshot(
+    payload: Dict[str, Any],
+    changed_field: str,
+) -> Dict[str, Any]:
+    """Propagate one explicitly edited snapshot value toward its price totals.
+
+    A complete snapshot contains duplicated values (for example ``mat_price``
+    at the top level and in ``total_price_breakdown``), so the edited path must
+    be explicit. Only dependent values are replaced; unrelated order metadata
+    and service-specific fields are passed through unchanged.
+    """
+    result = dict(payload)
+    breakdown = dict(result.get("total_price_breakdown") or {})
+    compact = dict(result.get("detail_price_calculation") or {})
+    result["total_price_breakdown"] = breakdown
+    result["detail_price_calculation"] = compact
+
+    path_parts = changed_field.split(".")
+    if not path_parts or len(path_parts) > 2:
+        raise ValueError(f"Unsupported changed_field: {changed_field!r}")
+
+    source: Any = result
+    for part in path_parts:
+        if not isinstance(source, dict) or part not in source:
+            raise ValueError(f"Unknown changed_field: {changed_field!r}")
+        source = source[part]
+
+    passthrough_fields = {
+        "order_id",
+        "order_name",
+        "order_code",
+        "manufacturing_cycle",
+        "coating_thickness_microns",
+        "electroplating_family",
+        "electroplating_process_id",
+        "processing_depth_microns",
+        "special_instructions",
+        "file_id",
+        "document_ids",
+    }
+    if changed_field in passthrough_fields:
+        return result
+
+    if source is None:
+        raise ValueError(f"changed_field {changed_field!r} cannot be null")
+
+    def number(value: Any, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    quantity = max(int(result.get("quantity") or 1), 1)
+    service_id = str(result.get("service_id") or "")
+    location = PRINTING_LOCATION if service_id == "printing" else "location_1"
+    cost_structure = COST_STRUCTURE.get(location)
+    if not cost_structure:
+        raise ValueError(f"Cost structure is not configured for {location!r}")
+
+    k_quantity = number(result.get("k_quantity"), calculate_k_quantity(quantity))
+    mat_price = number(result.get("mat_price"), number(breakdown.get("mat_price")))
+    work_price = number(result.get("work_price"), number(breakdown.get("work_price")))
+
+    geometry_fields = {"length", "width", "height"}
+    material_fields = {
+        "material_id", "material_form", "mat_volume", "mat_weight", "mat_price",
+        "total_price_breakdown.mat_price",
+    }
+    work_fields = {
+        "total_time", "k_otk", "cover_id", "finish_id", "tolerance_id",
+        "work_price", "total_price_breakdown.total_time",
+        "total_price_breakdown.price_of_hour",
+        "total_price_breakdown.work_price",
+    }
+
+    # Geometry/material is a small independent branch of the hierarchy.
+    if changed_field in geometry_fields:
+        dimensions = [result.get(name) for name in ("length", "width", "height")]
+        if all(value is not None for value in dimensions):
+            result["mat_volume"] = calculate_mat_volume(*(number(value) for value in dimensions))
+            changed_field = "mat_volume"
+
+    if changed_field in {"mat_volume", "material_id"}:
+        material = lookup_material(str(result.get("material_id") or ""))
+        density = number(material.get("density"))
+        if density > 0:
+            result["mat_weight"] = calculate_mat_weight(number(result.get("mat_volume")), density)
+            changed_field = "mat_weight"
+
+    if changed_field in {"mat_weight", "material_form"}:
+        material_id = str(result.get("material_id") or "")
+        form_id = resolve_priced_material_form(
+            material_id,
+            result.get("material_form"),
+            service_id,
+        )
+        form = (lookup_material(material_id).get("forms") or {}).get(form_id or "", {})
+        price_per_kg = number(form.get("price"))
+        if price_per_kg > 0:
+            result["mat_price"] = calculate_mat_price(
+                number(result.get("mat_weight")),
+                price_per_kg,
+            )
+            changed_field = "mat_price"
+
+    if changed_field == "total_price_breakdown.mat_price":
+        mat_price = number(breakdown.get("mat_price"))
+        result["mat_price"] = mat_price
+    elif changed_field == "mat_price":
+        mat_price = number(result.get("mat_price"))
+        breakdown["mat_price"] = mat_price
+
+    # Time and manufacturing coefficients feed the per-detail work price.
+    if changed_field == "total_time":
+        breakdown["total_time"] = result.get("total_time")
+    elif changed_field == "total_price_breakdown.total_time":
+        result["total_time"] = breakdown.get("total_time")
+    if changed_field == "total_price_breakdown.price_of_hour":
+        price_of_hour = number(breakdown.get("price_of_hour"))
+    else:
+        price_of_hour = number(
+            breakdown.get("price_of_hour"),
+            number(cost_structure.get("price_of_hour")),
+        )
+
+    if changed_field in work_fields - {
+        "work_price",
+        "total_price_breakdown.work_price",
+    }:
+        time_value = number(
+            breakdown.get("total_time"),
+            number(result.get("total_time")),
+        )
+        coefficient = number(result.get("k_otk"), 1.0) or 1.0
+        covers = result.get("cover_id") or []
+        cover_coefficient = calculate_cover_coefficient(covers)
+        if isinstance(cover_coefficient, (int, float)):
+            coefficient *= float(cover_coefficient)
+        if service_id == "cnc-milling":
+            coefficient *= number(
+                TOLERANCE.get(str(result.get("tolerance_id")), {}).get("value"),
+                1.0,
+            )
+            coefficient *= number(
+                FINISH.get(str(result.get("finish_id")), {}).get("value"),
+                1.0,
+            )
+        work_price = time_value * price_of_hour * coefficient
+        result["work_price"] = work_price
+        breakdown["work_price"] = work_price
+        changed_field = "work_price"
+    elif changed_field == "total_price_breakdown.work_price":
+        work_price = number(breakdown.get("work_price"))
+        result["work_price"] = work_price
+    elif changed_field == "work_price":
+        work_price = number(result.get("work_price"))
+        breakdown["work_price"] = work_price
+
+    if changed_field == "quantity":
+        k_quantity = calculate_k_quantity(quantity)
+        result["k_quantity"] = k_quantity
+    elif changed_field == "k_quantity":
+        k_quantity = number(result.get("k_quantity"), 1.0)
+
+    equipment_total = number(breakdown.get("price_special_equipment"))
+    equipment_unit = number(breakdown.get("price_special_equipment_to_quantity"))
+    if changed_field in {
+        "is_need_special_equipment",
+        "total_price_breakdown.is_need_special_equipment",
+    }:
+        need_equipment = bool(
+            result.get("is_need_special_equipment")
+            if changed_field == "is_need_special_equipment"
+            else breakdown.get("is_need_special_equipment")
+        )
+        result["is_need_special_equipment"] = need_equipment
+        breakdown["is_need_special_equipment"] = need_equipment
+        if not need_equipment:
+            equipment_total = 0.0
+            equipment_unit = 0.0
+    elif changed_field == "total_price_breakdown.material_price_special_equipment":
+        if bool(breakdown.get("is_need_special_equipment", result.get("is_need_special_equipment"))):
+            equipment_total = float(calculate_cost(
+                number(breakdown.get("material_price_special_equipment")),
+                0.0,
+                location,
+            ))
+        else:
+            equipment_total = 0.0
+        equipment_unit = equipment_total / quantity
+    elif changed_field == "total_price_breakdown.price_special_equipment":
+        equipment_total = number(breakdown.get("price_special_equipment"))
+        equipment_unit = equipment_total / quantity
+    elif changed_field == "total_price_breakdown.price_special_equipment_to_quantity":
+        equipment_unit = number(breakdown.get("price_special_equipment_to_quantity"))
+        equipment_total = equipment_unit * quantity
+    elif changed_field == "quantity" and equipment_total:
+        equipment_unit = equipment_total / quantity
+
+    breakdown["price_special_equipment"] = round(equipment_total, 2)
+    breakdown["price_special_equipment_to_quantity"] = round(equipment_unit, 2)
+
+    detailed_stage: Optional[str] = None
+    if changed_field in material_fields:
+        detailed_stage = "net"
+    if changed_field in {"work_price", "total_price_breakdown.work_price"}:
+        detailed_stage = "labor"
+    if changed_field == "service_id":
+        detailed_stage = "labor"
+    if changed_field == "total_price_breakdown.dop_salary":
+        detailed_stage = "insurance"
+    if changed_field in {
+        "total_price_breakdown.insurance_price",
+        "total_price_breakdown.overhead_expenses",
+        "total_price_breakdown.administrative_expenses",
+    }:
+        detailed_stage = "net"
+    if changed_field == "total_price_breakdown.net_cost":
+        detailed_stage = "profit"
+    if changed_field == "total_price_breakdown.profit":
+        detailed_stage = "cost"
+    if changed_field == "total_price_breakdown.cost":
+        detailed_stage = "unit"
+    if changed_field in {
+        "quantity", "k_quantity",
+        "is_need_special_equipment",
+        "total_price_breakdown.is_need_special_equipment",
+        "total_price_breakdown.material_price_special_equipment",
+        "total_price_breakdown.price_special_equipment",
+        "total_price_breakdown.price_special_equipment_to_quantity",
+    }:
+        detailed_stage = "unit"
+
+    stage_order = {
+        "labor": 0,
+        "insurance": 1,
+        "net": 2,
+        "profit": 3,
+        "cost": 4,
+        "unit": 5,
+    }
+    stage_index = stage_order.get(detailed_stage, 99)
+
+    breakdown["mat_price"] = mat_price
+    breakdown["work_price"] = work_price
+    breakdown["price_of_hour"] = price_of_hour
+    hour_multiplier = (
+        1
+        + number(cost_structure.get("dop_salary_coef"))
+        + number(cost_structure.get("dop_salary_coef")) * number(cost_structure.get("insurance_coef"))
+        + number(cost_structure.get("insurance_coef"))
+        + number(cost_structure.get("overhead_expenses_coef"))
+        + number(cost_structure.get("administrative_expenses_coef"))
+    )
+    if changed_field != "total_price_breakdown.price_of_hour_with_others":
+        breakdown["price_of_hour_with_others"] = round(price_of_hour * hour_multiplier, 2)
+
+    if stage_index <= stage_order["labor"]:
+        breakdown["dop_salary"] = number(cost_structure.get("dop_salary_coef")) * work_price
+        breakdown["overhead_expenses"] = number(cost_structure.get("overhead_expenses_coef")) * work_price
+        breakdown["administrative_expenses"] = number(cost_structure.get("administrative_expenses_coef")) * work_price
+    if stage_index <= stage_order["insurance"]:
+        breakdown["insurance_price"] = number(cost_structure.get("insurance_coef")) * (
+            work_price + number(breakdown.get("dop_salary"))
+        )
+    if stage_index <= stage_order["net"]:
+        breakdown["net_cost"] = sum(number(breakdown.get(field)) for field in (
+            "mat_price",
+            "work_price",
+            "dop_salary",
+            "insurance_price",
+            "overhead_expenses",
+            "administrative_expenses",
+        ))
+    if stage_index <= stage_order["profit"]:
+        net_cost = number(breakdown.get("net_cost"))
+        breakdown["profit"] = (
+            mat_price * number(cost_structure.get("profit_material"))
+            + (net_cost - mat_price) * number(cost_structure.get("other_profit"))
+        )
+    if stage_index <= stage_order["cost"]:
+        breakdown["cost"] = round(
+            number(breakdown.get("net_cost")) + number(breakdown.get("profit")),
+            2,
+        )
+
+    if stage_index <= stage_order["unit"]:
+        detail_price_one = round(number(breakdown.get("cost")) + equipment_unit, 2)
+        detail_price = round(detail_price_one * k_quantity, 2)
+        result["detail_price_one"] = detail_price_one
+        result["detail_price"] = detail_price
+        result["total_price"] = round(detail_price * quantity, 2)
+        breakdown["detail_price"] = detail_price
+        compact = build_detail_price_calculation(
+            location=location,
+            price_breakdown=breakdown,
+            detail_price=detail_price,
+            price_special_equipment_to_quantity=equipment_unit,
+            k_quantity=k_quantity,
+        )
+        result["detail_price_calculation"] = compact
+
+    # Direct edits in the compact representation propagate only to its parents.
+    compact_field = (
+        changed_field.split(".", 1)[1]
+        if changed_field.startswith("detail_price_calculation.")
+        else None
+    )
+    if compact_field in {
+        "material_price",
+        "salary_fund_with_taxes",
+        "price_special_equipment",
+    }:
+        compact["price_without_vat"] = round(sum(number(compact.get(field)) for field in (
+            "material_price",
+            "salary_fund_with_taxes",
+            "price_special_equipment",
+        )), 2)
+        compact_field = "price_without_vat"
+    if compact_field == "price_without_vat":
+        detail_price = round(number(compact.get("price_without_vat")), 2)
+        compact["taxes"] = round(detail_price * float(VAT_RATE), 2)
+        compact["total"] = round(detail_price + number(compact.get("taxes")), 2)
+        breakdown["detail_price"] = detail_price
+        result["detail_price"] = detail_price
+        result["detail_price_one"] = round(detail_price / k_quantity, 2) if k_quantity else detail_price
+        result["total_price"] = round(detail_price * quantity, 2)
+    elif compact_field == "taxes":
+        compact["total"] = round(
+            number(compact.get("price_without_vat")) + number(compact.get("taxes")),
+            2,
+        )
+
+    if changed_field == "total_price_breakdown.detail_price":
+        detail_price = round(number(breakdown.get("detail_price")), 2)
+        result["detail_price"] = detail_price
+        result["detail_price_one"] = round(detail_price / k_quantity, 2) if k_quantity else detail_price
+        result["total_price"] = round(detail_price * quantity, 2)
+        compact["price_without_vat"] = detail_price
+        compact["taxes"] = round(detail_price * float(VAT_RATE), 2)
+        compact["total"] = round(detail_price + number(compact.get("taxes")), 2)
+    elif changed_field == "detail_price_one":
+        detail_price_one = number(result.get("detail_price_one"))
+        detail_price = round(detail_price_one * k_quantity, 2)
+        result["detail_price"] = detail_price
+        result["total_price"] = round(detail_price * quantity, 2)
+        breakdown["detail_price"] = detail_price
+        compact["price_without_vat"] = detail_price
+        compact["taxes"] = round(detail_price * float(VAT_RATE), 2)
+        compact["total"] = round(detail_price + number(compact.get("taxes")), 2)
+
+    result["mat_price"] = mat_price
+    result["work_price"] = work_price
+    result["k_quantity"] = k_quantity
+    result["total_price_breakdown"] = breakdown
+    result["detail_price_calculation"] = compact
+    return result
 
 
 def calculate_cover_coefficient(cover_id: list) -> float:
