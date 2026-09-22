@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="230" viewBox="0 0 1120 230">
+  <rect width="100%" height="100%" rx="12" fill="#f8fafc"/>
+  <g fill="#0f172a" font-family="Cambria Math, STIX Two Math, Times New Roman, serif" font-size="29">
+    <text x="40" y="60">U€ = round(C + E<tspan baseline-shift="sub" font-size="19">q</tspan><tspan baseline-shift="baseline">, 2)</tspan></text>
+    <text x="40" y="125">U = round(U€ × k<tspan baseline-shift="sub" font-size="19">q</tspan><tspan baseline-shift="baseline">, 2)</tspan></text>
+    <text x="40" y="190">T = round(U × Q, 2)</text>
+  </g>
+</svg>

@@ -8,6 +8,7 @@ numpy-stl>=3.0.0,<4.0.0
 stl>=3.0.0,<4.0.0
 trimesh>=4.0.0,<5.0.0
 numpy>=1.24.0,<2.0.0
+apache-hamilton==1.90.0
 scipy>=1.11.0,<2.0.0
 shapely>=2.0.0,<3.0.0
 meshio>=5.3.0,<6.0.0

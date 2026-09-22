@@ -15,6 +15,7 @@ cadquery==2.5.2
 
 # Scientific computing
 numpy
+apache-hamilton==1.90.0
 # scipy NOT USE
 # shapely NOT USE
 # meshio NOT USE

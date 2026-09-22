@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="430" viewBox="0 0 1120 430">
+  <rect width="100%" height="100%" rx="12" fill="#f8fafc"/>
+  <g fill="#0f172a" font-family="Cambria Math, STIX Two Math, Times New Roman, serif" font-size="27">
+    <text x="40" y="55">D = a × W<tspan baseline-shift="sub" font-size="18">p</tspan></text>
+    <text x="40" y="110">I = i × (W<tspan baseline-shift="sub" font-size="18">p</tspan><tspan baseline-shift="baseline"> + D)</tspan></text>
+    <text x="40" y="165">O = o × W<tspan baseline-shift="sub" font-size="18">p</tspan></text>
+    <text x="40" y="220">G = g × W<tspan baseline-shift="sub" font-size="18">p</tspan></text>
+    <text x="500" y="55">N = M + W<tspan baseline-shift="sub" font-size="18">p</tspan><tspan baseline-shift="baseline"> + D + I + O + G</tspan></text>
+    <text x="500" y="110">P = M × p<tspan baseline-shift="sub" font-size="18">M</tspan><tspan baseline-shift="baseline"> + (N  M) × p</tspan><tspan baseline-shift="sub" font-size="18">O</tspan></text>
+    <text x="500" y="165">C = round(N + P, 2)</text>
+    <text x="40" y="300">h<tspan baseline-shift="sub" font-size="18">all</tspan><tspan baseline-shift="baseline"> = round(h × (1 + a + a × i + i + o + g), 2)</tspan></text>
+  </g>
+  <g fill="#64748b" font-family="Segoe UI, Arial, sans-serif" font-size="17">
+    <text x="40" y="360">D  4>?>;=8B5;L=0O 70@?;0B0; I  AB@0E>2K5 27=>AK; O  >1I5?@>872>4AB25==K5 @0AE>4K;</text>
+    <text x="40" y="395">G  >1I5E>7O9AB25==K5 @0AE>4K; N  A515AB>8<>ABL; P  ?@81K;L; C  F5=0 4> >A=0AB:8 8 kq.</text>
+  </g>
+</svg>

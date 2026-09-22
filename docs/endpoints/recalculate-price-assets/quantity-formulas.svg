@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="230" viewBox="0 0 1120 230">
+  <rect width="100%" height="100%" rx="12" fill="#f8fafc"/>
+  <g fill="#0f172a" font-family="Cambria Math, STIX Two Math, Times New Roman, serif" font-size="27">
+    <text x="40" y="60">;O q€ d Q d q:</text>
+    <text x="40" y="125">Ä = (ln Q  ln q€) / (ln q  ln q€)</text>
+    <text x="40" y="190">k<tspan baseline-shift="sub" font-size="18">q</tspan><tspan baseline-shift="baseline"> = round(k€ + (k  k€) × Ä, 4)</tspan></text>
+  </g>
+</svg>

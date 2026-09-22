@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="300" viewBox="0 0 1120 300">
+  <rect width="100%" height="100%" rx="12" fill="#f8fafc"/>
+  <g fill="#0f172a" font-family="Cambria Math, STIX Two Math, Times New Roman, serif" font-size="27">
+    <text x="40" y="55">V = round(L × W × H × 10{y, 10)</text>
+    <text x="40" y="115">m = round(V × Á, 4)</text>
+    <text x="40" y="175">M = round(m × p˜ × (1 + r˜), 2)</text>
+    <text x="40" y="235">m<tspan baseline-shift="sub" font-size="18">billable, order</tspan><tspan baseline-shift="baseline"> = max(m × Q, m</tspan><tspan baseline-shift="sub" font-size="18">MOQ</tspan><tspan baseline-shift="baseline">)</tspan></text>
+    <text x="590" y="235">m<tspan baseline-shift="sub" font-size="18">billable, unit</tspan><tspan baseline-shift="baseline"> = m</tspan><tspan baseline-shift="sub" font-size="18">billable, order</tspan><tspan baseline-shift="baseline"> / Q</tspan></text>
+  </g>
+  <text x="40" y="280" fill="#64748b" font-family="Segoe UI, Arial, sans-serif" font-size="17">@8<5G0=85: MOQ ?>:070= A?@02>G=> 8 2 recalculate_price_snapshot =5 ?@8<5=O5BAO.</text>
+</svg>

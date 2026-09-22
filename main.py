@@ -187,7 +187,7 @@ async def recalculate_price(
     ),
 ):
     """Recalculate all price values that depend on one edited snapshot field."""
-    from calculations.core import recalculate_price_snapshot
+    from calculations.price_recalculation import recalculate_price_snapshot
 
     try:
         result = recalculate_price_snapshot(request.model_dump(), changed_field)

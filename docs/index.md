@@ -10,6 +10,7 @@
 - [`GET /health`](endpoints/health.md)
 - [`GET /version`](endpoints/version.md)
 - [`POST /calculate-price`](endpoints/calculate-price.md)
+- [`POST /recalculate-price`](endpoints/recalculate-price.md)
 - [`POST /generate-previews`](endpoints/generate-previews.md)
 - [`GET /electroplating_material_families`](endpoints/electroplating-material-families.md)
 - [`GET /materials`](endpoints/materials.md)
